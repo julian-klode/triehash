@@ -119,11 +119,13 @@ my $enum_class = 0;
 
 my $code_name = "-";
 my $header_name = "-";
+my $ignore_case = 0;
 
 
 GetOptions ("code=s" => \$code_name,
             "header|H=s"   => \$header_name,
             "function-name=s" => \$function_name,
+            "ignore-case" => \$ignore_case,
             "enum-name=s" => \$enum_name,
             "enum-class" => \$enum_class)
     or die("Could not parse options!");
@@ -168,8 +170,12 @@ package Trie {
         printf $fh (("    " x $indent) . "switch(%d < length ? string[%d] : 0) {\n", $index, $index);
 
         foreach my $key (sort keys %{$self->{children}}) {
-            printf $fh ("    " x $indent . "case '%s':\n", lc($key));
-            printf $fh ("    " x $indent . "case '%s':\n", uc($key)) if lc($key) ne uc($key);
+            if ($ignore_case) {
+                printf $fh ("    " x $indent . "case '%s':\n", lc($key));
+                printf $fh ("    " x $indent . "case '%s':\n", uc($key)) if lc($key) ne uc($key);
+            } else {
+                printf $fh ("    " x $indent . "case '%s':\n", $key);
+            }
 
             $self->{children}{$key}->print_table($fh, $indent + 1, $index + 1);
         }
