@@ -162,12 +162,41 @@ package Trie {
         $self->{children}{$child}->insert($tail, $label, $value);
     }
 
+    sub filter_depth {
+        my ($self, $togo) = @_;
+
+        my $new = Trie->new;
+
+        if ($togo != 0) {
+            my $found = 0;
+            foreach my $key (sort keys %{$self->{children}}) {
+                if ($togo > 1 || defined $self->{children}{$key}->{value}) {
+                    my $child = $self->{children}{$key}->filter_depth($togo - 1);
+
+                    $new->{children}{$key}= $child if defined $child;
+                    $found = 1 if defined $child;
+                }
+            }
+            return undef if (!$found);
+        } else {
+            $new->{value} = $self->{value};
+            $new->{label} = $self->{label};
+        }
+
+        return $new;
+    }
+
     sub print_table {
         my ($self, $fh, $indent, $index) = @_;
         $indent //= 0;
         $index //= 0;
+
+        if (defined $self->{value}) {
+            printf $fh ("    " x $indent . "return %s;\n", ($enum_class ? "${enum_name}::" : "").$self->{label});
+            return;
+        }
         
-        printf $fh (("    " x $indent) . "switch(%d < length ? string[%d] : 0) {\n", $index, $index);
+        printf $fh (("    " x $indent) . "switch(string[%d]) {\n", $index);
 
         foreach my $key (sort keys %{$self->{children}}) {
             if ($ignore_case) {
@@ -180,7 +209,6 @@ package Trie {
             $self->{children}{$key}->print_table($fh, $indent + 1, $index + 1);
         }
 
-        printf $fh ("    " x $indent . "case 0: return %s;\n", ($enum_class ? "${enum_name}::" : "").$self->{label}) if defined $self->{value};
         printf $fh ("    " x $indent . "default: return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
         printf $fh ("    " x $indent . "}\n");
     }
@@ -231,6 +259,7 @@ sub word_to_label {
 
 
 my $counter = $counter_start;
+my %lengths;
 while (my $line = <$input>) {
     my ($label, $word, $value) = $line =~/\s*(?:([^~\s]+)\s*~)?(?:\s*([^~=\s]+)\s*)?(?:=\s*([^\s]+)\s+)?\s*/;
 
@@ -239,6 +268,7 @@ while (my $line = <$input>) {
         $label //= word_to_label($word);
 
         $trie->insert($word, $label, $counter);
+        $lengths{length($word)} = 1;
         $counter++;
     } elsif (defined $value) {
         $unknown = $value;
@@ -248,6 +278,7 @@ while (my $line = <$input>) {
         die "Invalid line: $line";
     }
 }
+
 
 print $header ("#ifndef TRIE_HASH_${function_name}\n");
 print $header ("#define TRIE_HASH_${function_name}\n");
@@ -262,7 +293,12 @@ print $header ("$static enum ${enum_name} ${function_name}(const char *string, s
 print $code ("#include \"$header_name\"\n") if ($header_name ne $code_name);
 print $code ("$static enum ${enum_name} ${function_name}(const char *string, size_t length)\n");
 print $code ("{\n");
-$trie->print_table($code, 1);
+print $code ("    switch (length) {\n");
+foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
+    print $code ("    case $local_length:\n");
+    $trie->filter_depth($local_length)->print_table($code, 2);
+}
+print $code ("    }\n");
 print $code ("}\n");
 
 # Print end of header here, in case header and code point to the same file
