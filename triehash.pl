@@ -300,7 +300,7 @@ foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
     $trie->filter_depth($local_length)->print_table($code, 2);
 }
 print $code ("    default:\n");
-print $code ("        return $unknown_label;\n");
+printf $code ("        return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
 print $code ("    }\n");
 print $code ("}\n");
 
