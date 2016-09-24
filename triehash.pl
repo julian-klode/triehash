@@ -298,6 +298,8 @@ foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
     print $code ("    case $local_length:\n");
     $trie->filter_depth($local_length)->print_table($code, 2);
 }
+print $code ("    default:\n");
+print $code ("        return $unknown_label;\n");
 print $code ("    }\n");
 print $code ("}\n");
 
