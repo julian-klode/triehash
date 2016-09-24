@@ -145,32 +145,35 @@ package Trie {
     }
 
     sub print_table {
-        my ($self, $index) = @_;
-        $index = 0 if !defined($index);
+        my ($self, $indent, $index) = @_;
+        $indent //= 0;
+        $index //= 0;
         
-        printf(("    " x $index) . "switch(%d < length ? string[%d] : 0) {\n", $index, $index);
+        printf(("    " x $indent) . "switch(%d < length ? string[%d] : 0) {\n", $index, $index);
 
         foreach my $key (sort keys %{$self->{children}}) {
-            printf "    " x $index . "case '%s':\n", lc($key);
-            printf "    " x $index . "case '%s':\n", uc($key) if (lc($key) ne uc($key));
+            printf "    " x $indent . "case '%s':\n", lc($key);
+            printf "    " x $indent . "case '%s':\n", uc($key) if (lc($key) ne uc($key));
 
-            $self->{children}{$key}->print_table($index + 1);
+            $self->{children}{$key}->print_table($indent + 1, $index + 1);
         }
 
-        printf("    " x $index . "case 0: return %s;\n", $self->{value}) if defined($self->{value});
-        printf("    " x $index . "default: return $unknown;\n");
-        printf("    " x $index . "}\n");
+        printf("    " x $indent . "case 0: return %s;\n", $self->{value}) if defined($self->{value});
+        printf("    " x $indent . "default: return $unknown;\n");
+        printf("    " x $indent . "}\n");
     }
 
     sub print_words {
-        my ($self, $sofar) = @_;
+        my ($self, $indent, $sofar) = @_;
 
-        $sofar = "" if !defined($sofar);
+        $indent //= 0;
+        $sofar //= "";
 
-        printf "%s = %s,\n", $self->{label}, $self->{value} if defined $self->{value};
+
+        printf "    " x $indent."%s = %s,\n", $self->{label}, $self->{value} if defined $self->{value};
 
         foreach my $key (sort keys %{$self->{children}}) {
-            $self->{children}{$key}->print_words($sofar . $key);
+            $self->{children}{$key}->print_words($indent, $sofar . $key);
         }
     }
 }
@@ -211,11 +214,11 @@ print("#include <stddef.h>\n");
 print("static int PerfectHashMax = $counter;\n");
 print("static int PerfectHash(const char *string, size_t length)\n");
 print("{\n");
-$trie->print_table();
+$trie->print_table(1);
 print("}\n");
 print("enum class PerfectKey {\n");
-$trie->print_words();
-printf("$unknown_label = $unknown,\n");
+$trie->print_words(1);
+printf("    $unknown_label = $unknown,\n");
 print("};\n");
 
 =head1 LICENSE
