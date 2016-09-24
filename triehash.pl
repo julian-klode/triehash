@@ -28,6 +28,7 @@ triehash - Generate a perfect hash function derived from a trie.
 =cut
 
 use strict;
+use warnings;
 use Getopt::Long;
 
 =head1 SYNOPSIS
