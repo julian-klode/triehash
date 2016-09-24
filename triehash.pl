@@ -113,13 +113,17 @@ valid C.
 my $unknown = -1;
 my $unknown_label = "Unknown";
 my $counter_start = 0;
+my $enum_name = "PerfectKey";
+my $function_name = "PerfectHash";
 
 my $code_name = "-";
 my $header_name = "-";
 
 
 GetOptions ("code=s" => \$code_name,
-            "header|H=s"   => \$header_name)
+            "header|H=s"   => \$header_name,
+            "function-name=s" => \$function_name,
+            "enum-name=s" => \$enum_name)
     or die("Could not parse options!");
 
 
@@ -226,14 +230,14 @@ while (my $line = <$input>) {
 }
 
 print $header ("#include <stddef.h>\n");
-print $header ("enum { PerfectHashMax = $counter };\n");
-print $header ("$static int PerfectHash(const char *string, size_t length);\n");
-print $header ("enum class PerfectKey {\n");
+print $header ("enum { ${enum_name}Max = $counter };\n");
+print $header ("$static int ${function_name}(const char *string, size_t length);\n");
+print $header ("enum class ${enum_name} {\n");
 $trie->print_words($header, 1);
 printf $header ("    $unknown_label = $unknown,\n");
 print $header ("};\n");
 
-print $code ("$static int PerfectHash(const char *string, size_t length)\n");
+print $code ("$static int ${function_name}(const char *string, size_t length)\n");
 print $code ("{\n");
 $trie->print_table($code, 1);
 print $code ("}\n");
