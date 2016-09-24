@@ -196,13 +196,24 @@ package Trie {
 
 my $trie = Trie->new;
 my $static = ($code_name eq $header_name) ? "static" : "";
-my $code = *STDOUT;
-my $header = *STDOUT;
+my $code;
+my $header;
+
 my $enum_specifier = $enum_class ? "enum class" : "enum";
 
 open(my $input, '<', $ARGV[0]) or die "Cannot open ".$ARGV[0].": $!";
-open($code, '>', $code_name) or die "Cannot open ".$ARGV[0].": $!" if ($code_name ne "-");
-open($header, '>', $header_name) or die "Cannot open ".$ARGV[0].": $!" if ($header_name ne "-");
+if ($code_name ne "-") {
+    open($code, '>', $code_name) or die "Cannot open ".$ARGV[0].": $!" ;
+} else {
+    $code = *STDOUT;
+}
+if($code_name eq $header_name) {
+    $header = $code;
+} elsif ($header_name ne "-") {
+    open($header, '>', $header_name) or die "Cannot open ".$ARGV[0].": $!" ;
+} else {
+    $header = *STDOUT;
+}
 
 
 sub word_to_label {
@@ -232,6 +243,8 @@ while (my $line = <$input>) {
     }
 }
 
+print $header ("#ifndef TRIE_HASH_${function_name}\n");
+print $header ("#define TRIE_HASH_${function_name}\n");
 print $header ("#include <stddef.h>\n");
 print $header ("enum { ${enum_name}Max = $counter };\n");
 print $header ("${enum_specifier} ${enum_name} {\n");
@@ -240,10 +253,14 @@ printf $header ("    $unknown_label = $unknown,\n");
 print $header ("};\n");
 print $header ("$static enum ${enum_name} ${function_name}(const char *string, size_t length);\n");
 
+print $code ("#include \"$header_name\"\n") if ($header_name ne $code_name);
 print $code ("$static enum ${enum_name} ${function_name}(const char *string, size_t length)\n");
 print $code ("{\n");
 $trie->print_table($code, 1);
 print $code ("}\n");
+
+# Print end of header here, in case header and code point to the same file
+print $header ("#endif                       /* TRIE_HASH_${function_name} */\n");
 
 
 =head1 LICENSE
