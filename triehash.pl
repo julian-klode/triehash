@@ -195,8 +195,24 @@ package Trie {
             printf $fh ("    " x $indent . "return %s;\n", ($enum_class ? "${enum_name}::" : "").$self->{label});
             return;
         }
-        
-        printf $fh (("    " x $indent) . "switch(string[%d]) {\n", $index);
+
+        # The difference between lowercase and uppercase alphabetical characters
+        # is that they have one bit flipped. If we have alphabetical characters
+        # in the search space, and the entire search space works fine if we
+        # always turn on the flip, just OR the character we are switching over
+        # with the bit.
+        my $want_use_bit = 0;
+        my $can_use_bit = 1;
+        foreach my $key (sort keys %{$self->{children}}) {
+            $can_use_bit &= ($key =~ /[a-zA-Z]/);
+            $want_use_bit |= ($key =~ /[a-zA-Z]/);
+        }
+
+        if ($ignore_case && $can_use_bit && $want_use_bit) {
+            printf $fh (("    " x $indent) . "switch(string[%d] | 32) {\n", $index);
+        } else {
+            printf $fh (("    " x $indent) . "switch(string[%d]) {\n", $index);
+        }
 
         my $notfirst = 0;
         foreach my $key (sort keys %{$self->{children}}) {
@@ -205,7 +221,7 @@ package Trie {
             }
             if ($ignore_case) {
                 printf $fh ("    " x $indent . "case '%s':\n", lc($key));
-                printf $fh ("    " x $indent . "case '%s':\n", uc($key)) if lc($key) ne uc($key);
+                printf $fh ("    " x $indent . "case '%s':\n", uc($key)) if lc($key) ne uc($key) && !($can_use_bit && $want_use_bit);
             } else {
                 printf $fh ("    " x $indent . "case '%s':\n", $key);
             }
