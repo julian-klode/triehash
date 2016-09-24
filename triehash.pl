@@ -198,7 +198,11 @@ package Trie {
         
         printf $fh (("    " x $indent) . "switch(string[%d]) {\n", $index);
 
+        my $notfirst = 0;
         foreach my $key (sort keys %{$self->{children}}) {
+            if ($notfirst) {
+                printf $fh ("    " x $indent . "    break;\n");
+            }
             if ($ignore_case) {
                 printf $fh ("    " x $indent . "case '%s':\n", lc($key));
                 printf $fh ("    " x $indent . "case '%s':\n", uc($key)) if lc($key) ne uc($key);
@@ -207,9 +211,10 @@ package Trie {
             }
 
             $self->{children}{$key}->print_table($fh, $indent + 1, $index + 1);
+
+            $notfirst=1;
         }
 
-        printf $fh ("    " x $indent . "default: return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
         printf $fh ("    " x $indent . "}\n");
     }
 
