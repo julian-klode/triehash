@@ -115,6 +115,7 @@ my $unknown_label = "Unknown";
 my $counter_start = 0;
 my $enum_name = "PerfectKey";
 my $function_name = "PerfectHash";
+my $enum_class = 0;
 
 my $code_name = "-";
 my $header_name = "-";
@@ -123,7 +124,8 @@ my $header_name = "-";
 GetOptions ("code=s" => \$code_name,
             "header|H=s"   => \$header_name,
             "function-name=s" => \$function_name,
-            "enum-name=s" => \$enum_name)
+            "enum-name=s" => \$enum_name,
+            "enum-class" => \$enum_class)
     or die("Could not parse options!");
 
 
@@ -172,8 +174,8 @@ package Trie {
             $self->{children}{$key}->print_table($fh, $indent + 1, $index + 1);
         }
 
-        printf $fh ("    " x $indent . "case 0: return %s;\n", $self->{value}) if defined $self->{value};
-        printf $fh ("    " x $indent . "default: return $unknown;\n");
+        printf $fh ("    " x $indent . "case 0: return %s;\n", ($enum_class ? "${enum_name}::" : "").$self->{label}) if defined $self->{value};
+        printf $fh ("    " x $indent . "default: return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
         printf $fh ("    " x $indent . "}\n");
     }
 
@@ -196,6 +198,7 @@ my $trie = Trie->new;
 my $static = ($code_name eq $header_name) ? "static" : "";
 my $code = *STDOUT;
 my $header = *STDOUT;
+my $enum_specifier = $enum_class ? "enum class" : "enum";
 
 open(my $input, '<', $ARGV[0]) or die "Cannot open ".$ARGV[0].": $!";
 open($code, '>', $code_name) or die "Cannot open ".$ARGV[0].": $!" if ($code_name ne "-");
@@ -231,13 +234,13 @@ while (my $line = <$input>) {
 
 print $header ("#include <stddef.h>\n");
 print $header ("enum { ${enum_name}Max = $counter };\n");
-print $header ("$static int ${function_name}(const char *string, size_t length);\n");
-print $header ("enum class ${enum_name} {\n");
+print $header ("${enum_specifier} ${enum_name} {\n");
 $trie->print_words($header, 1);
 printf $header ("    $unknown_label = $unknown,\n");
 print $header ("};\n");
+print $header ("$static enum ${enum_name} ${function_name}(const char *string, size_t length);\n");
 
-print $code ("$static int ${function_name}(const char *string, size_t length)\n");
+print $code ("$static enum ${enum_name} ${function_name}(const char *string, size_t length)\n");
 print $code ("{\n");
 $trie->print_table($code, 1);
 print $code ("}\n");
