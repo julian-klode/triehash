@@ -113,6 +113,15 @@ my $unknown = -1;
 my $unknown_label = "Unknown";
 my $counter_start = 0;
 
+my $code_name = "-";
+my $header_name = "-";
+
+
+GetOptions ("code=s" => \$code_name,
+            "header|H=s"   => \$header_name)
+    or die("Could not parse options!");
+
+
 package Trie {
 
     sub new {
@@ -145,40 +154,48 @@ package Trie {
     }
 
     sub print_table {
-        my ($self, $indent, $index) = @_;
+        my ($self, $fh, $indent, $index) = @_;
         $indent //= 0;
         $index //= 0;
         
-        printf(("    " x $indent) . "switch(%d < length ? string[%d] : 0) {\n", $index, $index);
+        printf $fh (("    " x $indent) . "switch(%d < length ? string[%d] : 0) {\n", $index, $index);
 
         foreach my $key (sort keys %{$self->{children}}) {
-            printf "    " x $indent . "case '%s':\n", lc($key);
-            printf "    " x $indent . "case '%s':\n", uc($key) if (lc($key) ne uc($key));
+            printf $fh ("    " x $indent . "case '%s':\n", lc($key));
+            printf $fh ("    " x $indent . "case '%s':\n", uc($key)) if lc($key) ne uc($key);
 
-            $self->{children}{$key}->print_table($indent + 1, $index + 1);
+            $self->{children}{$key}->print_table($fh, $indent + 1, $index + 1);
         }
 
-        printf("    " x $indent . "case 0: return %s;\n", $self->{value}) if defined($self->{value});
-        printf("    " x $indent . "default: return $unknown;\n");
-        printf("    " x $indent . "}\n");
+        printf $fh ("    " x $indent . "case 0: return %s;\n", $self->{value}) if defined $self->{value};
+        printf $fh ("    " x $indent . "default: return $unknown;\n");
+        printf $fh ("    " x $indent . "}\n");
     }
 
     sub print_words {
-        my ($self, $indent, $sofar) = @_;
+        my ($self, $fh, $indent, $sofar) = @_;
 
         $indent //= 0;
         $sofar //= "";
 
 
-        printf "    " x $indent."%s = %s,\n", $self->{label}, $self->{value} if defined $self->{value};
+        printf $fh ("    " x $indent."%s = %s,\n", $self->{label}, $self->{value}) if defined $self->{value};
 
         foreach my $key (sort keys %{$self->{children}}) {
-            $self->{children}{$key}->print_words($indent, $sofar . $key);
+            $self->{children}{$key}->print_words($fh, $indent, $sofar . $key);
         }
     }
 }
 
 my $trie = Trie->new;
+my $static = ($code_name eq $header_name) ? "static" : "";
+my $code = *STDOUT;
+my $header = *STDOUT;
+
+open(my $input, '<', $ARGV[0]) or die "Cannot open ".$ARGV[0].": $!";
+open($code, '>', $code_name) or die "Cannot open ".$ARGV[0].": $!" if ($code_name ne "-");
+open($header, '>', $header_name) or die "Cannot open ".$ARGV[0].": $!" if ($header_name ne "-");
+
 
 sub word_to_label {
     my $word = shift;
@@ -188,11 +205,8 @@ sub word_to_label {
 }
 
 
-open(my $fh, '<', $ARGV[0]) or die "Cannot open ".$ARGV[0].": $!";
-
-
 my $counter = $counter_start;
-while (my $line = <$fh>) {
+while (my $line = <$input>) {
     my ($label, $word, $value) = $line =~/\s*(?:([^~\s]+)\s*~)?(?:\s*([^~=\s]+)\s*)?(?:=\s*([^\s]+)\s+)?\s*/;
 
     if (defined $word) {
@@ -210,16 +224,19 @@ while (my $line = <$fh>) {
     }
 }
 
-print("#include <stddef.h>\n");
-print("static int PerfectHashMax = $counter;\n");
-print("static int PerfectHash(const char *string, size_t length)\n");
-print("{\n");
-$trie->print_table(1);
-print("}\n");
-print("enum class PerfectKey {\n");
-$trie->print_words(1);
-printf("    $unknown_label = $unknown,\n");
-print("};\n");
+print $header ("#include <stddef.h>\n");
+print $header ("enum { PerfectHashMax = $counter };\n");
+print $header ("$static int PerfectHash(const char *string, size_t length);\n");
+print $header ("enum class PerfectKey {\n");
+$trie->print_words($header, 1);
+printf $header ("    $unknown_label = $unknown,\n");
+print $header ("};\n");
+
+print $code ("$static int PerfectHash(const char *string, size_t length)\n");
+print $code ("{\n");
+$trie->print_table($code, 1);
+print $code ("}\n");
+
 
 =head1 LICENSE
 
