@@ -55,9 +55,16 @@ the last value.
 
 There may also be one line of the format
 
-    [ label ~] [ = value ]
+    [ label ~] = value
 
-Which defines the value to be used for non-existing keys
+Which defines the value to be used for non-existing keys. Note that this also
+changes default value for other keys, as for normal entries. So if you place
+
+    = 0
+
+at the beginning of the file, unknown strings map to 0, and the other strings
+map to values starting with 1. If label is not specified, the default is
+I<Unknown>.
 
 =head1 OPTIONS
 
@@ -102,7 +109,9 @@ valid C.
 
 =cut
 
-my $invalid = 0;
+my $unknown = -1;
+my $unknown_label = "Unknown";
+my $counter_start = 0;
 
 package Trie {
 
@@ -149,7 +158,7 @@ package Trie {
         }
 
         printf("    " x $index . "case 0: return %s;\n", $self->{value}) if defined($self->{value});
-        printf("    " x $index . "default: return $invalid;\n");
+        printf("    " x $index . "default: return $unknown;\n");
         printf("    " x $index . "}\n");
     }
 
@@ -179,23 +188,34 @@ sub word_to_label {
 open(my $fh, '<', $ARGV[0]) or die "Cannot open ".$ARGV[0].": $!";
 
 
-my $counter = 1;
+my $counter = $counter_start;
 while (my $line = <$fh>) {
-    my $word = $line;
-    $word =~ s/^s\+|\s+$//;
+    my ($label, $word, $value) = $line =~/\s*(?:([^~\s]+)\s*~)?(?:\s*([^~=\s]+)\s*)?(?:=\s*([^\s]+)\s+)?\s*/;
 
-    $trie->insert($word, word_to_label($word), $counter);
-    $counter++;
+    if (defined $word) {
+        $counter = $value if defined($value);
+        $label //= word_to_label($word);
+
+        $trie->insert($word, $label, $counter);
+        $counter++;
+    } elsif (defined $value) {
+        $unknown = $value;
+        $unknown_label = $label if defined($label);
+        $counter = $value + 1;
+    } else {
+        die "Invalid line: $line";
+    }
 }
 
 print("#include <stddef.h>\n");
-print("static unsigned int PerfectHashMax = ", $counter, ";\n");
-print("static unsigned int PerfectHash(const char *string, size_t length)\n");
+print("static int PerfectHashMax = $counter;\n");
+print("static int PerfectHash(const char *string, size_t length)\n");
 print("{\n");
 $trie->print_table();
 print("}\n");
 print("enum class PerfectKey {\n");
 $trie->print_words();
+printf("$unknown_label = $unknown,\n");
 print("};\n");
 
 =head1 LICENSE
