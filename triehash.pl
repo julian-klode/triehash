@@ -71,7 +71,7 @@ I<Unknown>.
 
 =over 4
 
-=item B<-c>I<.c file> B<--code>=I<.c file>
+=item B<-C>I<.c file> B<--code>=I<.c file>
 
 Generate code in the given file.
 
@@ -124,7 +124,14 @@ my $header;
 my $ignore_case = 0;
 
 
-GetOptions ("code=s" => \$code_name,
+Getopt::Long::config('default',
+                     'bundling',
+                     'no_getopt_compat',
+                     'no_auto_abbrev',
+                     'permute',
+                     'auto_help');
+
+GetOptions ("code|C=s" => \$code_name,
             "header|H=s"   => \$header_name,
             "function-name=s" => \$function_name,
             "ignore-case" => \$ignore_case,
