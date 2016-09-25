@@ -4,32 +4,32 @@ Build order-preserving minimal perfect hash functions.
 
 ## Performance
 
-Performance evaluation of an APT Packages file recognizer, times in
-nanoseconds, averaged over 100,000,000 runs:
+Performance was evaluated against other hash functions. As an input set, the
+fields of Debian Packages and Sources files was used, and each hash function
+was run 1,000,000 times for each word. The table below shows the total time
+per hash function, in nanoseconds for hashing these 82 words:
 
-amd64:
 
-word                |perfect| gperf |djbhash|alphaha
---------------------|-------|-------|-------|-------
-Package             |      9|     11|     10|      9
-PACKAGE             |      9|     11|     10|      9
-NotExisting         |      2|      5|     16|      9
-Installed-Size      |     14|     18|     20|      9
+host     | arch     |Trie     |TrieCase |GPerfCase|GPerf    |DJBCase  |DJBCase2 |DJB      |APTCase  |APTCase2
+---------|----------|---------|---------|---------|---------|---------|---------|---------|---------|----------
+plummer  | ppc64el  |      540|      601|     1914|     2000|     1639|     1399|     1345|      798|      473
+eller    | mipsel   |     4728|     5255|    12018|     7837|     6400|     4147|     4087|     3593|     3496
+asachi   | arm64    |     1000|     1603|     4333|     2401|     2716|     2179|     1625|     1289|     1160
+asachi   | armhf    |     1230|     1350|     5593|     5002|     2690|     1845|     1784|     1256|     1101
+barriere | amd64    |      689|      950|     3218|     1982|     2191|     2049|     1776|     1101|      698
+x230     | amd64    |      465|      504|     1200|      837|     1288|      970|      693|      766|      366
 
-arm64:
+All hosts except the x230 are Debian porterboxes. The x230 has a Core i5-3320M,
+barriere has an Opteron 23xx.
 
-word                |perfect| gperf |djbhash|alphaha
---------------------|-------|-------|-------|-------
-Package             |     14|     20|     15|     13
-PACKAGE             |     12|     20|     14|     13
-NotExisting         |      4|      8|     17|     12
-Installed-Size      |     22|     29|     21|     12
+Legend:
 
-armhf:
+* The case variants are case-insensitive
+* DJBCase is a DJB Hash with lowercase conversion, DJBCase2 just ORs one
+  bit into each value to get alphabetical characters to be lowercase
+* APTCase is the AlphaHash function from APT which hashes the last 8 bytes in a
+  word in a case-insensitive manner. APTCase2 is the same function unrolled.
 
-word                |perfect| gperf |djbhash|alphaha
---------------------|-------|-------|-------|-------
-Package             |     14|     23|     14|     11
-PACKAGE             |     12|     23|     14|     11
-NotExisting         |      4|      7|     18|     13
-Installed-Size      |     22|     35|     21|     11
+Notes:
+
+* The overhead is larger than needed
