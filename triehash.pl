@@ -253,6 +253,7 @@ if($code_name eq $header_name) {
 sub word_to_label {
     my $word = shift;
 
+    $word =~ s/_/__/g;
     $word =~ s/-/_/g;
     return $word;
 }
