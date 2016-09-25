@@ -19,9 +19,6 @@ asachi   | armhf    |     1230|     1350|     5593|     5002|     2690|     1845
 barriere | amd64    |      689|      950|     3218|     1982|     2191|     2049|     1776|     1101|      698
 x230     | amd64    |      465|      504|     1200|      837|     1288|      970|      693|      766|      366
 
-All hosts except the x230 are Debian porterboxes. The x230 has a Core i5-3320M,
-barriere has an Opteron 23xx.
-
 Legend:
 
 * The case variants are case-insensitive
@@ -29,7 +26,11 @@ Legend:
   bit into each value to get alphabetical characters to be lowercase
 * APTCase is the AlphaHash function from APT which hashes the last 8 bytes in a
   word in a case-insensitive manner. APTCase2 is the same function unrolled.
+* All hosts except the x230 are Debian porterboxes. The x230 has a Core i5-3320M,
+  barriere has an Opteron 23xx.
 
 Notes:
 
-* The overhead is larger than needed
+* The overhead is larger than needed on some platforms due to gcc inserting
+  unneeded zero extend instructions, see:
+  https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77729
