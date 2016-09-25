@@ -119,6 +119,8 @@ my $enum_class = 0;
 
 my $code_name = "-";
 my $header_name = "-";
+my $code;
+my $header;
 my $ignore_case = 0;
 
 
@@ -185,14 +187,52 @@ package Trie {
 
         return $new;
     }
+}
+
+# Code generator for C and C++
+package CCodeGen {
+    my $static = ($code_name eq $header_name) ? "static" : "";
+    my $enum_specifier = $enum_class ? "enum class" : "enum";
+
+    sub new {
+        my $class = shift;
+        my $self = {};
+        bless $self, $class;
+
+        return $self;
+    }
+
+    sub open_output {
+        my $self = shift;
+        if ($code_name ne "-") {
+            open($code, '>', $code_name) or die "Cannot open ".$ARGV[0].": $!" ;
+        } else {
+            $code = *STDOUT;
+        }
+        if($code_name eq $header_name) {
+            $header = $code;
+        } elsif ($header_name ne "-") {
+            open($header, '>', $header_name) or die "Cannot open ".$ARGV[0].": $!" ;
+        } else {
+            $header = *STDOUT;
+        }
+    }
+
+    sub word_to_label {
+        my ($class, $word) = @_;
+
+        $word =~ s/_/__/g;
+        $word =~ s/-/_/g;
+        return $word;
+    }
 
     sub print_table {
-        my ($self, $fh, $indent, $index) = @_;
+        my ($self, $trie, $fh, $indent, $index) = @_;
         $indent //= 0;
         $index //= 0;
 
-        if (defined $self->{value}) {
-            printf $fh ("    " x $indent . "return %s;\n", ($enum_class ? "${enum_name}::" : "").$self->{label});
+        if (defined $trie->{value}) {
+            printf $fh ("    " x $indent . "return %s;\n", ($enum_class ? "${enum_name}::" : "").$trie->{label});
             return;
         }
 
@@ -203,7 +243,7 @@ package Trie {
         # with the bit.
         my $want_use_bit = 0;
         my $can_use_bit = 1;
-        foreach my $key (sort keys %{$self->{children}}) {
+        foreach my $key (sort keys %{$trie->{children}}) {
             $can_use_bit &= ($key =~ /[a-zA-Z]/);
             $want_use_bit |= ($key =~ /[a-zA-Z]/);
         }
@@ -215,7 +255,7 @@ package Trie {
         }
 
         my $notfirst = 0;
-        foreach my $key (sort keys %{$self->{children}}) {
+        foreach my $key (sort keys %{$trie->{children}}) {
             if ($notfirst) {
                 printf $fh ("    " x $indent . "    break;\n");
             }
@@ -226,7 +266,7 @@ package Trie {
                 printf $fh ("    " x $indent . "case '%s':\n", $key);
             }
 
-            $self->{children}{$key}->print_table($fh, $indent + 1, $index + 1);
+            $self->print_table($trie->{children}{$key}, $fh, $indent + 1, $index + 1);
 
             $notfirst=1;
         }
@@ -235,107 +275,93 @@ package Trie {
     }
 
     sub print_words {
-        my ($self, $fh, $indent, $sofar) = @_;
+        my ($self, $trie, $fh, $indent, $sofar) = @_;
 
         $indent //= 0;
         $sofar //= "";
 
 
-        printf $fh ("    " x $indent."%s = %s,\n", $self->{label}, $self->{value}) if defined $self->{value};
+        printf $fh ("    " x $indent."%s = %s,\n", $trie->{label}, $trie->{value}) if defined $trie->{value};
 
-        foreach my $key (sort keys %{$self->{children}}) {
-            $self->{children}{$key}->print_words($fh, $indent, $sofar . $key);
+        foreach my $key (sort keys %{$trie->{children}}) {
+            $self->print_words($trie->{children}{$key}, $fh, $indent, $sofar . $key);
         }
     }
-}
 
-my $trie = Trie->new;
-my $static = ($code_name eq $header_name) ? "static" : "";
-my $code;
-my $header;
+    sub main {
+        my ($self, $trie, $num_values, %lengths) = @_;
+        print $header ("#ifndef TRIE_HASH_${function_name}\n");
+        print $header ("#define TRIE_HASH_${function_name}\n");
+        print $header ("#include <stddef.h>\n");
+        print $header ("enum { ${enum_name}Max = $num_values };\n");
+        print $header ("${enum_specifier} ${enum_name} {\n");
+        $self->print_words($trie, $header, 1);
+        printf $header ("    $unknown_label = $unknown,\n");
+        print $header ("};\n");
+        print $header ("$static enum ${enum_name} ${function_name}(const char *string, size_t length);\n");
 
-my $enum_specifier = $enum_class ? "enum class" : "enum";
+        print $code ("#include \"$header_name\"\n") if ($header_name ne $code_name);
 
-open(my $input, '<', $ARGV[0]) or die "Cannot open ".$ARGV[0].": $!";
-if ($code_name ne "-") {
-    open($code, '>', $code_name) or die "Cannot open ".$ARGV[0].": $!" ;
-} else {
-    $code = *STDOUT;
-}
-if($code_name eq $header_name) {
-    $header = $code;
-} elsif ($header_name ne "-") {
-    open($header, '>', $header_name) or die "Cannot open ".$ARGV[0].": $!" ;
-} else {
-    $header = *STDOUT;
-}
+        foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
+            print $code ("static enum ${enum_name} ${function_name}${local_length}(const char *string)\n");
+            print $code ("{\n");
+            $self->print_table($trie->filter_depth($local_length), $code, 1);
+            printf $code ("    return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
+            print $code ("}\n");
+        }
+        print $code ("$static enum ${enum_name} ${function_name}(const char *string, size_t length)\n");
+        print $code ("{\n");
+        print $code ("    switch (length) {\n");
+        foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
+            print $code ("    case $local_length:\n");
+            print $code ("        return ${function_name}${local_length}(string);\n");
+        }
+        print $code ("    default:\n");
+        printf $code ("        return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
+        print $code ("    }\n");
+        print $code ("}\n");
 
-
-sub word_to_label {
-    my $word = shift;
-
-    $word =~ s/_/__/g;
-    $word =~ s/-/_/g;
-    return $word;
-}
-
-
-my $counter = $counter_start;
-my %lengths;
-while (my $line = <$input>) {
-    my ($label, $word, $value) = $line =~/\s*(?:([^~\s]+)\s*~)?(?:\s*([^~=\s]+)\s*)?(?:=\s*([^\s]+)\s+)?\s*/;
-
-    if (defined $word) {
-        $counter = $value if defined($value);
-        $label //= word_to_label($word);
-
-        $trie->insert($word, $label, $counter);
-        $lengths{length($word)} = 1;
-        $counter++;
-    } elsif (defined $value) {
-        $unknown = $value;
-        $unknown_label = $label if defined($label);
-        $counter = $value + 1;
-    } else {
-        die "Invalid line: $line";
+        # Print end of header here, in case header and code point to the same file
+        print $header ("#endif                       /* TRIE_HASH_${function_name} */\n");
     }
 }
 
+sub build_trie {
+    my $codegen = shift;
+    my $trie = Trie->new;
 
-print $header ("#ifndef TRIE_HASH_${function_name}\n");
-print $header ("#define TRIE_HASH_${function_name}\n");
-print $header ("#include <stddef.h>\n");
-print $header ("enum { ${enum_name}Max = $counter };\n");
-print $header ("${enum_specifier} ${enum_name} {\n");
-$trie->print_words($header, 1);
-printf $header ("    $unknown_label = $unknown,\n");
-print $header ("};\n");
-print $header ("$static enum ${enum_name} ${function_name}(const char *string, size_t length);\n");
+    my $counter = $counter_start;
+    my %lengths;
 
-print $code ("#include \"$header_name\"\n") if ($header_name ne $code_name);
+    open(my $input, '<', $ARGV[0]) or die "Cannot open ".$ARGV[0].": $!";
+    while (my $line = <$input>) {
+        my ($label, $word, $value) = $line =~/\s*(?:([^~\s]+)\s*~)?(?:\s*([^~=\s]+)\s*)?(?:=\s*([^\s]+)\s+)?\s*/;
 
+        if (defined $word) {
+            $counter = $value if defined($value);
+            $label //= $codegen->word_to_label($word);
 
-foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
-    print $code ("static enum ${enum_name} ${function_name}${local_length}(const char *string)\n");
-    print $code ("{\n");
-    $trie->filter_depth($local_length)->print_table($code, 1);
-    printf $code ("    return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
-    print $code ("}\n");
+            $trie->insert($word, $label, $counter);
+            $lengths{length($word)} = 1;
+            $counter++;
+        } elsif (defined $value) {
+            $unknown = $value;
+            $unknown_label = $label if defined($label);
+            $counter = $value + 1;
+        } else {
+            die "Invalid line: $line";
+        }
+    }
+
+    return ($trie, $counter, %lengths);
 }
-print $code ("$static enum ${enum_name} ${function_name}(const char *string, size_t length)\n");
-print $code ("{\n");
-print $code ("    switch (length) {\n");
-foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
-    print $code ("    case $local_length:\n");
-    print $code ("        return ${function_name}${local_length}(string);\n");
-}
-print $code ("    default:\n");
-printf $code ("        return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
-print $code ("    }\n");
-print $code ("}\n");
 
-# Print end of header here, in case header and code point to the same file
-print $header ("#endif                       /* TRIE_HASH_${function_name} */\n");
+
+my $codegen = CCodeGen->new();
+my ($trie, $counter, %lengths) = build_trie($codegen);
+
+$codegen->open_output();
+$codegen->main($trie, $counter, %lengths);
 
 
 =head1 LICENSE
