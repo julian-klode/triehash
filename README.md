@@ -1,6 +1,7 @@
 # Order-preserving minimal perfect hash function generator
 
-Build order-preserving minimal perfect hash functions.
+Build order-preserving minimal perfect hash functions. It can also generate
+functions for matching shortest or longest prefixes.
 
 ## Performance
 

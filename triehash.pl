@@ -118,6 +118,18 @@ specifically it requires support for byte-aligned integer types like this:
 Generate a file in the specified language. Currently known are 'C' and 'tree',
 the latter generating a tree.
 
+=item B<--prefix>
+
+Consider the input words to match a string if they are a prefix of that
+string. For example, if the dictionary contains the word "foo", the hash
+function would return the value for "foo" for the word "foobar".
+
+=item B<--prefer-long>
+
+If this option is set, the main entry function is ordered so that the
+long length cases come first. Combined with --prefix, that allows you
+to do longest prefix matching.
+
 =back
 
 =cut
@@ -136,6 +148,8 @@ my $header;
 my $ignore_case = 0;
 my $multi_byte = 1;
 my $language = 'C';
+my $prefix = 0;
+my $prefer_long = 0;
 
 
 Getopt::Long::config('default',
@@ -152,6 +166,8 @@ GetOptions ("code|C=s" => \$code_name,
             "enum-name=s" => \$enum_name,
             "language|l=s" => \$language,
             "multi-byte!" => \$multi_byte,
+            "prefix!" => \$prefix,
+            "prefer-long!" => \$prefer_long,
             "enum-class" => \$enum_class)
     or die("Could not parse options!");
 
@@ -449,14 +465,25 @@ package CCodeGen {
         }
         print $code ("$static enum ${enum_name} ${function_name}(const char *string, size_t length)\n");
         print $code ("{\n");
-        print $code ("    switch (length) {\n");
-        foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
-            print $code ("    case $local_length:\n");
-            print $code ("        return ${function_name}${local_length}(string);\n");
+        if ($prefix) {
+            printf $code ("    enum ${enum_name} res = %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
+            foreach my $local_length (sort { ($prefer_long) ? $b <=> $a : $a <=> $b } (keys %lengths)) {
+                print $code ("    if (length >= $local_length) {\n");
+                print $code ("        res = ${function_name}${local_length}(string);\n");
+                printf $code ("        if (res != %s$unknown_label) return res;\n", ($enum_class ? "${enum_name}::" : ""));
+                print $code ("    }\n");
+            }
+            print $code ("     return res;")
+        } else {
+            print $code ("    switch (length) {\n");
+            foreach my $local_length (sort { ($prefer_long) ? $b <=> $a : $a <=> $b } (keys %lengths)) {
+                print $code ("    case $local_length:\n");
+                print $code ("        return ${function_name}${local_length}(string);\n");
+            }
+            print $code ("    default:\n");
+            printf $code ("        return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
+            print $code ("    }\n");
         }
-        print $code ("    default:\n");
-        printf $code ("        return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
-        print $code ("    }\n");
         print $code ("}\n");
 
         # Print end of header here, in case header and code point to the same file
