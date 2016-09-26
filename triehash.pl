@@ -113,6 +113,11 @@ specifically it requires support for byte-aligned integer types like this:
 
     typedef uint64_t __attribute__((aligned (1))) triehash_uu64;
 
+=item B<--language=>I<language>
+
+Generate a file in the specified language. Currently known are 'C' and 'tree',
+the latter generating a tree.
+
 =back
 
 =cut
@@ -130,6 +135,7 @@ my $code;
 my $header;
 my $ignore_case = 0;
 my $multi_byte = 1;
+my $language = 'C';
 
 
 Getopt::Long::config('default',
@@ -144,6 +150,7 @@ GetOptions ("code|C=s" => \$code_name,
             "function-name=s" => \$function_name,
             "ignore-case" => \$ignore_case,
             "enum-name=s" => \$enum_name,
+            "language|l=s" => \$language,
             "multi-byte!" => \$multi_byte,
             "enum-class" => \$enum_class)
     or die("Could not parse options!");
@@ -508,8 +515,63 @@ sub build_trie {
     return ($trie, $counter, %lengths);
 }
 
+# Generates an ASCII art tree
+package TreeCodeGen {
 
-my $codegen = CCodeGen->new();
+    sub new {
+        my $class = shift;
+        my $self = {};
+        bless $self, $class;
+
+        return $self;
+    }
+
+    sub word_to_label {
+        my ($self, $word) = @_;
+        return $word;
+    }
+
+    sub main {
+        my ($self, $trie, $counter, %lengths) = @_;
+        foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
+            printf $code ("┌────────────────────────────────────────────────────┐\n");
+            printf $code ("│              Trie for words of length %-4d         │\n", $local_length);
+            printf $code ("└────────────────────────────────────────────────────┘\n");
+            $self->print($trie->filter_depth($local_length)->rebuild_tree());
+        }
+    }
+
+    sub open_output {
+        my $self = shift;
+        if ($code_name ne "-") {
+            open($code, '>', $code_name) or die "Cannot open ".$ARGV[0].": $!" ;
+        } else {
+            $code = *STDOUT;
+        }
+    }
+
+    # Print a trie
+    sub print {
+        my ($self, $trie, $depth) = @_;
+        $depth //= 0;
+
+        print(" → ") if defined($trie->{label});
+        print($trie->{label} // "", "\n");
+        foreach my $key (sort keys %{$trie->{children}}) {
+            print("│   " x ($depth), "├── $key");
+            $self->print($trie->{children}{$key}, $depth + 1);
+        }
+    }
+}
+
+my %codegens = (
+    C => "CCodeGen",
+    tree => "TreeCodeGen",
+);
+
+
+defined($codegens{$language}) or die "Unknown language $language. Valid choices: ", join(", ", keys %codegens);
+my $codegen = $codegens{$language}->new();
 my ($trie, $counter, %lengths) = build_trie($codegen);
 
 $codegen->open_output();
