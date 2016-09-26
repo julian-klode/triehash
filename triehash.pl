@@ -533,6 +533,15 @@ package TreeCodeGen {
 
     sub main {
         my ($self, $trie, $counter, %lengths) = @_;
+        printf $code ("┌────────────────────────────────────────────────────┐\n");
+        printf $code ("│                   Initial trie                     │\n");
+        printf $code ("└────────────────────────────────────────────────────┘\n");
+        $self->print($trie);
+        printf $code ("┌────────────────────────────────────────────────────┐\n");
+        printf $code ("│                   Rebuilt trie                     │\n");
+        printf $code ("└────────────────────────────────────────────────────┘\n");
+        $self->print($trie->rebuild_tree());
+
         foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
             printf $code ("┌────────────────────────────────────────────────────┐\n");
             printf $code ("│              Trie for words of length %-4d         │\n", $local_length);
