@@ -430,7 +430,7 @@ package CCodeGen {
         if ($multi_byte) {
             for (my $i=16; $i <= 64; $i *= 2) {
                 print $code ("typedef uint${i}_t __attribute__((aligned (1))) triehash_uu${i};\n");
-                print $code ("_Static_assert(_Alignof(triehash_uu${i}) == 1, \"Cannot create byte-aligned uint${i}\");\n");
+                print $code ("typedef char static_assert${i}[__alignof__(triehash_uu${i}) == 1 ? 1 : -1];\n");
             }
 
             print $code ("#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__\n");
