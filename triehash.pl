@@ -555,10 +555,10 @@ package TreeCodeGen {
         my ($self, $trie, $depth) = @_;
         $depth //= 0;
 
-        print(" → ") if defined($trie->{label});
-        print($trie->{label} // "", "\n");
+        print $code (" → ") if defined($trie->{label});
+        print $code ($trie->{label} // "", "\n");
         foreach my $key (sort keys %{$trie->{children}}) {
-            print("│   " x ($depth), "├── $key");
+            print $code ("│   " x ($depth), "├── $key");
             $self->print($trie->{children}{$key}, $depth + 1);
         }
     }
