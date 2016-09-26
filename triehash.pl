@@ -251,8 +251,8 @@ package CCodeGen {
         my $want_use_bit = 0;
         my $can_use_bit = 1;
         foreach my $key (sort keys %{$trie->{children}}) {
-            $can_use_bit &= ($key =~ /[a-zA-Z]/);
-            $want_use_bit |= ($key =~ /[a-zA-Z]/);
+            $can_use_bit &= not main::ambiguous($key);
+            $want_use_bit |= ($key =~ /^[a-zA-Z]+$/);
         }
 
         if ($ignore_case && $can_use_bit && $want_use_bit) {
@@ -331,6 +331,27 @@ package CCodeGen {
         # Print end of header here, in case header and code point to the same file
         print $header ("#endif                       /* TRIE_HASH_${function_name} */\n");
     }
+}
+
+# Check if the word can be reached by exactly one word in (alphabet OR 0x20).
+sub ambiguous {
+    my $word = shift;
+
+    foreach my $char (split //, $word) {
+        # Setting the lowercase flag in the character produces a different
+        # character, the character would thus not be matched.
+        return 1 if ((ord($char) | 0x20) != ord(lc($char)));
+
+        # A word is also ambiguous if any character in lowercase can be reached
+        # by ORing 0x20 from another character in the charset that is not a
+        # lowercase character of the current character.
+        # Assume that we have UTF-8 and the most significant bit can be set
+        for (my $i = 0; $i < 256; $i++) {
+            return 1 if (($i | 0x20) == ord(lc($char)) && lc(chr($i)) ne lc($char));
+        }
+    }
+
+    return 0;
 }
 
 sub build_trie {
