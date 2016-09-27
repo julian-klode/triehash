@@ -337,14 +337,14 @@ package CCodeGen {
     sub open_output {
         my $self = shift;
         if ($code_name ne "-") {
-            open($code, '>', $code_name) or die "Cannot open ".$ARGV[0].": $!" ;
+            open($code, '>', $code_name) or die "Cannot open $code_name: $!" ;
         } else {
             $code = *STDOUT;
         }
         if($code_name eq $header_name) {
             $header = $code;
         } elsif ($header_name ne "-") {
-            open($header, '>', $header_name) or die "Cannot open ".$ARGV[0].": $!" ;
+            open($header, '>', $header_name) or die "Cannot open $header_name: $!" ;
         } else {
             $header = *STDOUT;
         }
