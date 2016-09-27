@@ -100,6 +100,11 @@ Put the function and enum into a class (C++)
 
 Generate an enum class instead of an enum (C++)
 
+=item B<--counter-name=>I<name>
+
+Use I<name> for a counter that is set to the latest entry in the enumeration
++ 1. This can be useful for defining array sizes.
+
 =item B<--extern-c>
 
 Wrap everything into an extern "C" block. Not compatible with the C++
@@ -131,8 +136,6 @@ I<__ARM_ARCH> is defined and I<__ARM_FEATURE_UNALIGNED> is not defined,
 as there is a measurable overhead from emulating the unaligned reads on
 ARM.
 
-
-
 =item B<--language=>I<language>
 
 Generate a file in the specified language. Currently known are 'C' and 'tree',
@@ -156,6 +159,7 @@ my $header;
 my $ignore_case = 0;
 my $multi_byte = 1;
 my $language = 'C';
+my $counter_name = undef;
 
 
 Getopt::Long::config('default',
@@ -172,7 +176,8 @@ GetOptions ("code|C=s" => \$code_name,
             "enum-name=s" => \$enum_name,
             "language|l=s" => \$language,
             "multi-byte!" => \$multi_byte,
-            "enum-class" => \$enum_class)
+            "enum-class" => \$enum_class,
+            "counter-name=s" => \$counter_name)
     or die("Could not parse options!");
 
 
@@ -449,7 +454,7 @@ package CCodeGen {
         print $header ("#define TRIE_HASH_${function_name}\n");
         print $header ("#include <stddef.h>\n");
         print $header ("#include <stdint.h>\n");
-        print $header ("enum { ${enum_name}Max = $num_values };\n");
+        printf $header ("enum { $counter_name = $num_values };\n") if (defined($counter_name));
         print $header ("${enum_specifier} ${enum_name} {\n");
         $self->print_words($trie, $header, 1);
         printf $header ("    $unknown_label = $unknown,\n");
