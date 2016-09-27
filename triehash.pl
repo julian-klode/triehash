@@ -108,10 +108,30 @@ valid C.
 
 =item B<--multi-byte>, B<--no-multi-byte>
 
-Generate code reading multiple bytes at once. This requires a GNU C compiler,
-specifically it requires support for byte-aligned integer types like this:
+Generate code reading multiple bytes at once. This generates code for both
+multiple bytes and single byte reads, but only enables the multiple byte
+reads of GNU C compatible compilers, as the following extensions are used:
+
+=over 8
+
+=item Byte-aligned integers
+
+We must be able to generate integers that are aligned to a single byte using:
 
     typedef uint64_t __attribute__((aligned (1))) triehash_uu64;
+
+=item Byte-order
+
+The macros __BYTE_ORDER__ and __ORDER_LITTLE_ENDIAN__ must be defined.
+
+=back
+
+We forcefully disable multi-byte reads on platforms where the variable
+I<__ARM_ARCH> is defined and I<__ARM_FEATURE_UNALIGNED> is not defined,
+as there is a measurable overhead from emulating the unaligned reads on
+ARM.
+
+
 
 =item B<--language=>I<language>
 
@@ -412,6 +432,17 @@ package CCodeGen {
         }
     }
 
+    sub print_functions {
+        my ($self, $trie, %lengths) = @_;
+        foreach my $local_length (sort { $lengths{$b} <=> $lengths{$a} } (keys %lengths)) {
+            print $code ("static enum ${enum_name} ${function_name}${local_length}(const char *string)\n");
+            print $code ("{\n");
+            $self->print_table($trie->filter_depth($local_length)->rebuild_tree(), $code, 1);
+            printf $code ("    return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
+            print $code ("}\n");
+        }
+    }
+
     sub main {
         my ($self, $trie, $num_values, %lengths) = @_;
         print $header ("#ifndef TRIE_HASH_${function_name}\n");
@@ -428,6 +459,7 @@ package CCodeGen {
         print $code ("#include \"$header_name\"\n") if ($header_name ne $code_name);
 
         if ($multi_byte) {
+            print $code ("#ifdef __GNUC__\n");
             for (my $i=16; $i <= 64; $i *= 2) {
                 print $code ("typedef uint${i}_t __attribute__((aligned (1))) triehash_uu${i};\n");
                 print $code ("typedef char static_assert${i}[__alignof__(triehash_uu${i}) == 1 ? 1 : -1];\n");
@@ -438,15 +470,21 @@ package CCodeGen {
             print $code ("#else\n");
             print $code ("#define onechar(c, s, l) (((uint64_t)(c)) << (l-8-s))\n");
             print $code ("#endif\n");
+            print $code ("#if (!defined(__ARM_ARCH) || defined(__ARM_FEATURE_UNALIGNED)) && !defined(TRIE_HASH_NO_MULTI_BYTE)\n");
+            print $code ("#define TRIE_HASH_MULTI_BYTE\n");
+            print $code ("#endif\n");
+            print $code ("#endif /*GNUC */\n");
+
+            print $code ("#ifdef TRIE_HASH_MULTI_BYTE\n");
+            $self->print_functions($trie, %lengths);
+            $multi_byte = 0;
+            print $code ("#else\n");
+            $self->print_functions($trie, %lengths);
+            print $code ("#endif /* TRIE_HASH_MULTI_BYTE */\n");
+        } else {
+            $self->print_functions($trie, %lengths);
         }
 
-        foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
-            print $code ("static enum ${enum_name} ${function_name}${local_length}(const char *string)\n");
-            print $code ("{\n");
-            $self->print_table($trie->filter_depth($local_length)->rebuild_tree(), $code, 1);
-            printf $code ("    return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
-            print $code ("}\n");
-        }
         print $code ("$static enum ${enum_name} ${function_name}(const char *string, size_t length)\n");
         print $code ("{\n");
         print $code ("    switch (length) {\n");
