@@ -141,6 +141,12 @@ ARM.
 Generate a file in the specified language. Currently known are 'C' and 'tree',
 the latter generating a tree.
 
+=item B<--include=>I<header>
+
+Add the header to the include statements of the header file. The value must
+be surrounded by quotes or angle brackets for C code. May be specified multiple
+times.
+
 =back
 
 =cut
@@ -160,6 +166,7 @@ my $ignore_case = 0;
 my $multi_byte = 1;
 my $language = 'C';
 my $counter_name = undef;
+my @includes = ();
 
 
 Getopt::Long::config('default',
@@ -177,6 +184,7 @@ GetOptions ("code|C=s" => \$code_name,
             "language|l=s" => \$language,
             "multi-byte!" => \$multi_byte,
             "enum-class" => \$enum_class,
+            "include=s" => \@includes,
             "counter-name=s" => \$counter_name)
     or die("Could not parse options!");
 
@@ -454,6 +462,9 @@ package CCodeGen {
         print $header ("#define TRIE_HASH_${function_name}\n");
         print $header ("#include <stddef.h>\n");
         print $header ("#include <stdint.h>\n");
+        foreach my $include (@includes) {
+            print $header ("#include $include\n");
+        }
         printf $header ("enum { $counter_name = $num_values };\n") if (defined($counter_name));
         print $header ("${enum_specifier} ${enum_name} {\n");
         $self->print_words($trie, $header, 1);
