@@ -6,26 +6,45 @@ Build order-preserving minimal perfect hash functions.
 
 Performance was evaluated against other hash functions. As an input set, the
 fields of Debian Packages and Sources files was used, and each hash function
-was run 1,000,000 times for each word. The table below shows the total time
-per hash function, in nanoseconds for hashing these 82 words:
+was run 1,000,000 times for each word. The byte count of the words were then
+summed up and divided by the total number of nanoseconds each function ran, so
+all speeds below are given in bytes per nanosecond, AKA gigabyte per second.
 
+arch/function|jak-x230 (amd64)|backup (amd64)|asachi.d.o (arm64)|asachi.d.o (armel)|asachi.d.o (armhf)|plummer.d.o (ppc64el)|eller.d.o (mipsel)
+-------------|----------------|--------------|------------------|------------------|------------------|---------------------|------------------
+Trie         |      2.4       |      1.9     |      1.2         |      0.9         |      0.8         |      2.0            |      0.2
+Trie (*)     |      2.2       |      1.7     |      0.8         |      0.7         |      0.7         |      1.8            |      0.2
+re2c         |      1.7       |      1.3     |      0.9         |      0.9         |      0.7         |      1.6            |      0.2
+re2c (*)     |      1.2       |      0.9     |      0.6         |      0.6         |      0.5         |      1.1            |      0.1
+gperf (*)    |      0.7       |      0.5     |      0.2         |      0.2         |      0.2         |      0.5            |      0.1
+gperf        |      1.3       |      0.9     |      0.3         |      0.3         |      0.2         |      0.4            |      0.1
+djb (*)      |      0.7       |      0.5     |      0.3         |      0.3         |      0.3         |      0.5            |      0.1
+djb (**)     |      1.0       |      0.7     |      0.4         |      0.5         |      0.5         |      0.6            |      0.2
+djb          |      0.9       |      0.7     |      0.5         |      0.5         |      0.5         |      0.7            |      0.2
+apt (*)      |      1.2       |      0.9     |      0.7         |      0.7         |      0.7         |      1.1            |      0.2
+apt (**)     |      2.3       |      1.7     |      0.7         |      0.9         |      0.8         |      1.9            |      0.2
 
-host     | arch     |Trie     |TrieCase |GPerfCase|GPerf    |DJBCase  |DJBCase2 |DJB      |APTCase  |APTCase2
----------|----------|---------|---------|---------|---------|---------|---------|---------|---------|----------
-plummer  | ppc64el  |      540|      601|     1914|     2000|     1639|     1399|     1345|      798|      473
-eller    | mipsel   |     4728|     5255|    12018|     7837|     6400|     4147|     4087|     3593|     3496
-asachi   | arm64    |     1000|     1603|     4333|     2401|     2716|     2179|     1625|     1289|     1160
-asachi   | armhf    |     1230|     1350|     5593|     5002|     2690|     1845|     1784|     1256|     1101
-barriere | amd64    |      689|      950|     3218|     1982|     2191|     2049|     1776|     1101|      698
-x230     | amd64    |      465|      504|     1200|      837|     1288|      970|      693|      766|      366
+And transposed:
+
+function/arch        |Trie     |Trie (*) |re2c     |re2c (*) |gperf (*)|gperf    |djb (*)  |djb (**) |djb      |apt (*)  |apt (**)
+---------------------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------
+jak-x230 (amd64)     |      2.4|      2.2|      1.7|      1.2|      0.7|      1.3|      0.7|      1.0|      0.9|      1.2|      2.3
+backup (amd64)       |      1.9|      1.7|      1.3|      0.9|      0.5|      0.9|      0.5|      0.7|      0.7|      0.9|      1.7
+asachi.d.o (arm64)   |      1.2|      0.8|      0.9|      0.6|      0.2|      0.3|      0.3|      0.4|      0.5|      0.7|      0.7
+asachi.d.o (armel)   |      0.9|      0.7|      0.9|      0.6|      0.2|      0.3|      0.3|      0.5|      0.5|      0.7|      0.9
+asachi.d.o (armhf)   |      0.8|      0.7|      0.7|      0.5|      0.2|      0.2|      0.3|      0.5|      0.5|      0.7|      0.8
+plummer.d.o (ppc64el)|      2.0|      1.8|      1.6|      1.1|      0.5|      0.4|      0.5|      0.6|      0.7|      1.1|      1.9
+eller.d.o (mipsel)   |      0.2|      0.2|      0.2|      0.1|      0.1|      0.1|      0.1|      0.2|      0.2|      0.2|      0.2
+
 
 Legend:
 
-* The case variants are case-insensitive
-* DJBCase is a DJB Hash with lowercase conversion, DJBCase2 just ORs one
+* The (*) variants are case-insensitive, (**) are more optimised versions
+  of the (*) versions.
+* DJB (*) is a DJB Hash with naive lowercase conversion, DJB (**) just ORs one
   bit into each value to get alphabetical characters to be lowercase
-* APTCase is the AlphaHash function from APT which hashes the last 8 bytes in a
-  word in a case-insensitive manner. APTCase2 is the same function unrolled.
+* APT (*) is the AlphaHash function from APT which hashes the last 8 bytes in a
+  word in a case-insensitive manner. APT (**) is the same function unrolled.
 * All hosts except the x230 are Debian porterboxes. The x230 has a Core i5-3320M,
   barriere has an Opteron 23xx.
 

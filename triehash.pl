@@ -111,11 +111,17 @@ Wrap everything into an extern "C" block. Not compatible with the C++
 options, as a header with namespaces, classes, or enum classes is not
 valid C.
 
-=item B<--multi-byte>, B<--no-multi-byte>
+=item B<--multi-byte>=I<value>
 
-Generate code reading multiple bytes at once. This generates code for both
-multiple bytes and single byte reads, but only enables the multiple byte
-reads of GNU C compatible compilers, as the following extensions are used:
+Generate code reading multiple bytes at once. The value is a string of power
+of twos to enable. The default value is 320 meaning that 8, 4, and single byte
+reads are enabled. Specify 0 to disable multi-byte completely, or add 2 if you
+also want to allow 2-byte reads. 2-byte reads are disabled by default because
+they negatively affect performance on older Intel architectures.
+
+This generates code for both multiple bytes and single byte reads, but only
+enables the multiple byte reads of GNU C compatible compilers, as the following
+extensions are used:
 
 =over 8
 
@@ -163,7 +169,7 @@ my $header_name = "-";
 my $code;
 my $header;
 my $ignore_case = 0;
-my $multi_byte = 1;
+my $multi_byte = "320";
 my $language = 'C';
 my $counter_name = undef;
 my @includes = ();
@@ -182,7 +188,7 @@ GetOptions ("code|C=s" => \$code_name,
             "ignore-case" => \$ignore_case,
             "enum-name=s" => \$enum_name,
             "language|l=s" => \$language,
-            "multi-byte!" => \$multi_byte,
+            "multi-byte=s" => \$multi_byte,
             "enum-class" => \$enum_class,
             "include=s" => \@includes,
             "counter-name=s" => \$counter_name)
@@ -206,11 +212,11 @@ package Trie {
     # Return the largest power of 2 smaller or equal to the argument
     sub alignpower2 {
         my ($self, $length) = @_;
-        if ($multi_byte) {
-            return 8 if ($length >= 8);
-            return 4 if ($length >= 4);
-            return 2 if ($length >= 2);
-        }
+
+        return 8 if ($length >= 8 && $multi_byte =~ /3/);
+        return 4 if ($length >= 4 && $multi_byte =~ /2/);
+        return 2 if ($length >= 2 && $multi_byte =~ /1/);
+
         return 1;
     }
 
