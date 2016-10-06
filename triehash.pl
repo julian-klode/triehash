@@ -453,7 +453,7 @@ package CCodeGen {
 
     sub print_functions {
         my ($self, $trie, %lengths) = @_;
-        foreach my $local_length (sort { $lengths{$b} <=> $lengths{$a} } (keys %lengths)) {
+        foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
             print $code ("static enum ${enum_name} ${function_name}${local_length}(const char *string)\n");
             print $code ("{\n");
             $self->print_table($trie->filter_depth($local_length)->rebuild_tree(), $code, 1);
