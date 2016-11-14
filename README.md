@@ -2,6 +2,9 @@
 
 Build order-preserving minimal perfect hash functions.
 
+[![codecov](https://codecov.io/gh/julian-klode/triehash/branch/master/graph/badge.svg)](https://codecov.io/gh/julian-klode/triehash)
+[![Build Status](https://travis-ci.org/julian-klode/triehash.svg?branch=master)](https://travis-ci.org/julian-klode/triehash)
+
 ## Performance
 
 Performance was evaluated against other hash functions. As an input set, the
