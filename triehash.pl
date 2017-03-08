@@ -195,6 +195,15 @@ GetOptions ("code|C=s" => \$code_name,
     or die("Could not parse options!");
 
 
+# This implements a simple trie. Each node has three attributes:
+#
+# children - A hash of keys to other nodes
+# value    - The value to be stored here
+# label    - A named representation of the value.
+#
+# The key at each level of the trie can consist of one or more bytes, and the
+# trie can be normalized to a form where all keys at a level have the same
+# length using rebuild_tree().
 package Trie {
 
     sub new {
@@ -229,6 +238,8 @@ package Trie {
         return (substr($key, 0, $split), substr($key, $split));
     }
 
+    # Given a key, a label, and a value, insert that into the tree, possibly
+    # replacing an existing node.
     sub insert {
         my ($self, $key, $label, $value) = @_;
 
@@ -245,6 +256,10 @@ package Trie {
         $self->{children}{$child}->insert($tail, $label, $value);
     }
 
+    # Construct a new trie that only contains words of a given length. This
+    # is used to split up the common trie after knowing all words, so we can
+    # switch on the expected word length first, and have the per-trie function
+    # implement simple longest prefix matching.
     sub filter_depth {
         my ($self, $togo) = @_;
 
@@ -269,6 +284,7 @@ package Trie {
         return $new;
     }
 
+    # (helper for rebuild_tree)
     # Reinsert all value nodes into the specified $trie, prepending $prefix
     # to their $paths.
     sub reinsert_value_nodes_into {
@@ -281,7 +297,17 @@ package Trie {
         }
     }
 
-    # Find an earlier split due a an ambiguous character
+    # (helper for rebuild_tree)
+    # Find the earliest point to split a key. Normally, we split at the maximum
+    # power of 2 that is greater or equal than the length of the key. When we
+    # are building an ASCII-optimised case-insensitive trie that simply ORs
+    # each byte with 0x20, we need to split at the first ambiguous character:
+    #
+    # For example, the words a-bc and a\rbc are identical in such a situation:
+    #       '-' | 0x20 == '-' == '\r' | 0x20
+    # We cannot simply switch on all 4 bytes at once, but need to split before
+    # the ambigious character so we can process the ambiguous character on its
+    # own.
     sub find_ealier_split {
         my ($self, $key) = @_;
 
@@ -296,7 +322,10 @@ package Trie {
         return $self->alignpower2(length $key);
     }
 
-    # Rebuild the trie, splitting at ambiguous chars, and unifying key lengths
+    # This rebuilds the trie, splitting each key before ambiguous characters
+    # as explained in find_earlier_split(), and then chooses the smallest
+    # such split at each level, so that all keys at all levels have the same
+    # length (so we can use a multi-byte switch).
     sub rebuild_tree {
         my $self = shift;
         # Determine if/where we need to split before an ambiguous character
