@@ -560,22 +560,17 @@ package CCodeGen {
     }
 }
 
-# Check if the word can be reached by exactly one word in (alphabet OR 0x20).
+# A character is ambiguous if the 1<<5 (0x20) bit does not correspond to the
+# lower case bit. A word is ambiguous if any character is. This definition is
+# used to check if we can perform the |0x20 optimization when building a case-
+# insensitive trie.
 sub ambiguous {
     my $word = shift;
 
     foreach my $char (split //, $word) {
-        # Setting the lowercase flag in the character produces a different
-        # character, the character would thus not be matched.
-        return 1 if ((ord($char) | 0x20) != ord(lc($char)));
-
-        # A word is also ambiguous if any character in lowercase can be reached
-        # by ORing 0x20 from another character in the charset that is not a
-        # lowercase character of the current character.
-        # Assume that we have UTF-8 and the most significant bit can be set
-        for my $i (0..255) {
-            return 1 if (($i | 0x20) == ord(lc($char)) && lc(chr($i)) ne lc($char));
-        }
+        # If 0x20 does not solely indicate lowercase, it is ambiguous
+        return 1 if ord(lc($char)) != (ord($char) | 0x20);
+        return 1 if ord(uc($char)) != (ord($char) & ~0x20);
     }
 
     return 0;
