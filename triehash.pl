@@ -387,54 +387,61 @@ package CCodeGen {
         return sprintf("*((triehash_uu%s*) &string[$offset])", $length * 8);
     }
 
+    # Render the trie so that it matches the longest prefix.
     sub print_table {
         my ($self, $trie, $fh, $indent, $index) = @_;
         $indent //= 0;
         $index //= 0;
 
+        # If we have children, try to match them.
+        if (%{$trie->{children}}) {
+            # The difference between lowercase and uppercase alphabetical characters
+            # is that they have one bit flipped. If we have alphabetical characters
+            # in the search space, and the entire search space works fine if we
+            # always turn on the flip, just OR the character we are switching over
+            # with the bit.
+            my $want_use_bit = 0;
+            my $can_use_bit = 1;
+            my $key_length = 0;
+            foreach my $key (sort keys %{$trie->{children}}) {
+                $can_use_bit &= not main::ambiguous($key);
+                $want_use_bit |= ($key =~ /^[a-zA-Z]+$/);
+                $key_length = length($key);
+            }
+
+            if ($ignore_case && $can_use_bit && $want_use_bit) {
+                printf $fh (("    " x $indent) . "switch(%s | 0x%s) {\n", $self->switch_key($index, $key_length), "20" x $key_length);
+            } else {
+                printf $fh (("    " x $indent) . "switch(%s) {\n", $self->switch_key($index, $key_length));
+            }
+
+            my $notfirst = 0;
+            foreach my $key (sort keys %{$trie->{children}}) {
+                if ($notfirst) {
+                    printf $fh ("    " x $indent . "    break;\n");
+                }
+                if ($ignore_case) {
+                    printf $fh ("    " x $indent . "case %s:\n", $self->case_label(lc($key)));
+                    printf $fh ("    " x $indent . "case %s:\n", $self->case_label(uc($key))) if lc($key) ne uc($key) && !($can_use_bit && $want_use_bit);
+                } else {
+                    printf $fh ("    " x $indent . "case %s:\n", $self->case_label($key));
+                }
+
+                $self->print_table($trie->{children}{$key}, $fh, $indent + 1, $index + length($key));
+
+                $notfirst=1;
+            }
+
+            printf $fh ("    " x $indent . "}\n");
+        }
+
+
+        # This node has a value, so it is a possible end point. If no children
+        # matched, we have found our longest prefix.
         if (defined $trie->{value}) {
             printf $fh ("    " x $indent . "return %s;\n", ($enum_class ? "${enum_name}::" : "").$trie->{label});
-            return;
         }
 
-        # The difference between lowercase and uppercase alphabetical characters
-        # is that they have one bit flipped. If we have alphabetical characters
-        # in the search space, and the entire search space works fine if we
-        # always turn on the flip, just OR the character we are switching over
-        # with the bit.
-        my $want_use_bit = 0;
-        my $can_use_bit = 1;
-        my $key_length = 0;
-        foreach my $key (sort keys %{$trie->{children}}) {
-            $can_use_bit &= not main::ambiguous($key);
-            $want_use_bit |= ($key =~ /^[a-zA-Z]+$/);
-            $key_length = length($key);
-        }
-
-        if ($ignore_case && $can_use_bit && $want_use_bit) {
-            printf $fh (("    " x $indent) . "switch(%s | 0x%s) {\n", $self->switch_key($index, $key_length), "20" x $key_length);
-        } else {
-            printf $fh (("    " x $indent) . "switch(%s) {\n", $self->switch_key($index, $key_length));
-        }
-
-        my $notfirst = 0;
-        foreach my $key (sort keys %{$trie->{children}}) {
-            if ($notfirst) {
-                printf $fh ("    " x $indent . "    break;\n");
-            }
-            if ($ignore_case) {
-                printf $fh ("    " x $indent . "case %s:\n", $self->case_label(lc($key)));
-                printf $fh ("    " x $indent . "case %s:\n", $self->case_label(uc($key))) if lc($key) ne uc($key) && !($can_use_bit && $want_use_bit);
-            } else {
-                printf $fh ("    " x $indent . "case %s:\n", $self->case_label($key));
-            }
-
-            $self->print_table($trie->{children}{$key}, $fh, $indent + 1, $index + length($key));
-
-            $notfirst=1;
-        }
-
-        printf $fh ("    " x $indent . "}\n");
     }
 
     sub print_words {
