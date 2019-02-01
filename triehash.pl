@@ -583,6 +583,7 @@ sub build_trie {
     my $trie = Trie->new;
 
     my $counter = $counter_start;
+    my $prev_value;
     my %lengths;
 
     open(my $input, '<', $ARGV[0]) or die "Cannot open $ARGV[0]: $!";
@@ -595,19 +596,20 @@ sub build_trie {
         }x;
 
         if (defined $word) {
-            $counter = $value if defined($value);
             $label //= $codegen->word_to_label($word);
+            $value //= defined $prev_value ? $prev_value + 1 : 0;
 
-            $trie->insert($word, $label, $counter);
+            $trie->insert($word, $label, $value);
             $lengths{length($word)} = 1;
-            $counter++;
         } elsif (defined $value) {
             $unknown = $value;
             $unknown_label = $label if defined($label);
-            $counter = $value + 1;
         } else {
             die "Invalid line: $line";
         }
+
+        $prev_value = $value;
+        $counter = $value + 1 if $value >= $counter;
     }
 
     return ($trie, $counter, %lengths);
