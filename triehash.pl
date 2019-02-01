@@ -518,7 +518,7 @@ package CCodeGen {
 
         if ($multi_byte) {
             print { $code } ("#ifdef __GNUC__\n");
-            for (my $i=16; $i <= 64; $i *= 2) {
+            foreach my $i ((16, 32, 64)) {
                 print { $code } ("typedef uint${i}_t __attribute__((aligned (1))) triehash_uu${i};\n");
                 print { $code } ("typedef char static_assert${i}[__alignof__(triehash_uu${i}) == 1 ? 1 : -1];\n");
             }
