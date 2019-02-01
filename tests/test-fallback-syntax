@@ -1,0 +1,42 @@
+#!/bin/sh
+. $(dirname $(readlink -f $0))/framework.sh
+
+WORDS="Fallback ~   = -5"
+
+# Check the fallback syntax works with spaces
+testsuccessequal "#ifndef TRIE_HASH_PerfectHash
+#define TRIE_HASH_PerfectHash
+#include <stddef.h>
+#include <stdint.h>
+enum PerfectKey {
+    Fallback = -5,
+};
+static enum PerfectKey PerfectHash(const char *string, size_t length);
+static enum PerfectKey PerfectHash(const char *string, size_t length)
+{
+    switch (length) {
+    default:
+        return Fallback;
+    }
+}
+#endif                       /* TRIE_HASH_PerfectHash */" triehash --multi-byte=0 /dev/stdin
+
+WORDS="Fallback ~= -5"
+
+# Check the fallback syntax works without spaces
+testsuccessequal "#ifndef TRIE_HASH_PerfectHash
+#define TRIE_HASH_PerfectHash
+#include <stddef.h>
+#include <stdint.h>
+enum PerfectKey {
+    Fallback = -5,
+};
+static enum PerfectKey PerfectHash(const char *string, size_t length);
+static enum PerfectKey PerfectHash(const char *string, size_t length)
+{
+    switch (length) {
+    default:
+        return Fallback;
+    }
+}
+#endif                       /* TRIE_HASH_PerfectHash */" triehash --multi-byte=0 /dev/stdin
