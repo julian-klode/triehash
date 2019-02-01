@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+=encoding utf8
 
 =head1 NAME
 
@@ -29,6 +30,7 @@ triehash - Generate a perfect hash function derived from a trie.
 
 use strict;
 use warnings;
+use utf8;
 use Getopt::Long;
 
 =head1 SYNOPSIS
@@ -650,9 +652,10 @@ package TreeCodeGen {
     sub open_output {
         my $self = shift;
         if ($code_name ne '-') {
-            open($code, '>', $code_name) or die "Cannot open $ARGV[0]: $!" ;
+            open($code, '>:encoding(utf8)', $code_name) or die "Cannot open $ARGV[0]: $!" ;
         } else {
             $code = *STDOUT;
+            binmode($code, ':encoding(utf8)');
         }
     }
 
