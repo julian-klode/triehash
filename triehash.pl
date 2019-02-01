@@ -90,6 +90,14 @@ The name of the enumeration.
 
 The name of the function.
 
+=item B<--label-prefix=>I<word>
+
+The prefix to use for labels.
+
+=item B<--label-uppercase>
+
+Uppercase label names when normalizing them.
+
 =item B<--namespace=>I<name>
 
 Put the function and enum into a namespace (C++)
@@ -158,7 +166,7 @@ times.
 =cut
 
 my $unknown = -1;
-my $unknown_label = 'Unknown';
+my $unknown_label = undef;
 my $counter_start = 0;
 my $enum_name = 'PerfectKey';
 my $function_name = 'PerfectHash';
@@ -168,6 +176,8 @@ my $code_name = '-';
 my $header_name = '-';
 my $code;
 my $header;
+my $label_prefix = undef;
+my $label_uppercase = 0;
 my $ignore_case = 0;
 my $multi_byte = '320';
 my $language = 'C';
@@ -185,6 +195,8 @@ Getopt::Long::config('default',
 GetOptions ('code|C=s' => \$code_name,
             'header|H=s'   => \$header_name,
             'function-name=s' => \$function_name,
+            'label-prefix=s' => \$label_prefix,
+            'label-uppercase' => \$label_uppercase,
             'ignore-case' => \$ignore_case,
             'enum-name=s' => \$enum_name,
             'language|l=s' => \$language,
@@ -385,12 +397,22 @@ package CCodeGen {
         }
     }
 
+    sub mangle_label {
+        my ($self, $label) = @_;
+
+        $label = $label_prefix . $label if defined($label_prefix);
+        $label = uc $label if $label_uppercase;
+
+        return $label;
+    }
+
     sub word_to_label {
         my ($self, $word) = @_;
 
         $word =~ s/_/__/g;
         $word =~ s/-/_/g;
-        return $word;
+
+        return $self->mangle_label($word);
     }
 
     # Return a case label, by shifting and or-ing bytes in the word
@@ -601,7 +623,7 @@ sub build_trie {
             $lengths{length($word)} = 1;
         } elsif (defined $value) {
             $unknown = $value;
-            $unknown_label = $label if defined($label);
+            $unknown_label = $codegen->mangle_label($label) if defined $label;
         } else {
             die "Invalid line: $line";
         }
@@ -609,6 +631,8 @@ sub build_trie {
         $prev_value = $value;
         $counter = $value + 1 if $value >= $counter;
     }
+
+    $unknown_label //= $codegen->mangle_label('Unknown');
 
     return ($trie, $counter, %lengths);
 }
@@ -622,6 +646,11 @@ package TreeCodeGen {
         bless $self, $class;
 
         return $self;
+    }
+
+    sub mangle_label {
+        my ($self, $label) = @_;
+        return $label;
     }
 
     sub word_to_label {
