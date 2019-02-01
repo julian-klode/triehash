@@ -107,11 +107,9 @@ Generate an enum class instead of an enum (C++)
 Use I<name> for a counter that is set to the latest entry in the enumeration
 + 1. This can be useful for defining array sizes.
 
-=item B<--extern-c>
+=item B<--ignore-case>
 
-Wrap everything into an extern "C" block. Not compatible with the C++
-options, as a header with namespaces, classes, or enum classes is not
-valid C.
+Ignore case for words.
 
 =item B<--multi-byte>=I<value>
 
