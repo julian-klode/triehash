@@ -439,21 +439,21 @@ package CCodeGen {
             }
 
             if ($ignore_case && $can_use_bit && $want_use_bit) {
-                printf $fh (('    ' x $indent) . "switch(%s | 0x%s) {\n", $self->switch_key($index, $key_length), '20' x $key_length);
+                printf { $fh } (('    ' x $indent) . "switch(%s | 0x%s) {\n", $self->switch_key($index, $key_length), '20' x $key_length);
             } else {
-                printf $fh (('    ' x $indent) . "switch(%s) {\n", $self->switch_key($index, $key_length));
+                printf { $fh } (('    ' x $indent) . "switch(%s) {\n", $self->switch_key($index, $key_length));
             }
 
             my $notfirst = 0;
             foreach my $key (sort keys %{$trie->{children}}) {
                 if ($notfirst) {
-                    printf $fh ('    ' x $indent . "    break;\n");
+                    printf { $fh } ('    ' x $indent . "    break;\n");
                 }
                 if ($ignore_case) {
-                    printf $fh ('    ' x $indent . "case %s:\n", $self->case_label(lc($key)));
-                    printf $fh ('    ' x $indent . "case %s:\n", $self->case_label(uc($key))) if lc($key) ne uc($key) && !($can_use_bit && $want_use_bit);
+                    printf { $fh } ('    ' x $indent . "case %s:\n", $self->case_label(lc($key)));
+                    printf { $fh } ('    ' x $indent . "case %s:\n", $self->case_label(uc($key))) if lc($key) ne uc($key) && !($can_use_bit && $want_use_bit);
                 } else {
-                    printf $fh ('    ' x $indent . "case %s:\n", $self->case_label($key));
+                    printf { $fh } ('    ' x $indent . "case %s:\n", $self->case_label($key));
                 }
 
                 $self->print_table($trie->{children}{$key}, $fh, $indent + 1, $index + length($key));
@@ -461,14 +461,14 @@ package CCodeGen {
                 $notfirst=1;
             }
 
-            printf $fh ('    ' x $indent . "}\n");
+            printf { $fh } ('    ' x $indent . "}\n");
         }
 
 
         # This node has a value, so it is a possible end point. If no children
         # matched, we have found our longest prefix.
         if (defined $trie->{value}) {
-            printf $fh ('    ' x $indent . "return %s;\n", ($enum_class ? "${enum_name}::" : '').$trie->{label});
+            printf { $fh } ('    ' x $indent . "return %s;\n", ($enum_class ? "${enum_name}::" : '').$trie->{label});
         }
 
     }
@@ -480,7 +480,7 @@ package CCodeGen {
         $sofar //= '';
 
 
-        printf $fh ('    ' x $indent."%s = %s,\n", $trie->{label}, $trie->{value}) if defined $trie->{value};
+        printf { $fh } ('    ' x $indent."%s = %s,\n", $trie->{label}, $trie->{value}) if defined $trie->{value};
 
         foreach my $key (sort keys %{$trie->{children}}) {
             $self->print_words($trie->{children}{$key}, $fh, $indent, $sofar . $key);
@@ -490,73 +490,73 @@ package CCodeGen {
     sub print_functions {
         my ($self, $trie, %lengths) = @_;
         foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
-            print $code ("static enum ${enum_name} ${function_name}${local_length}(const char *string)\n");
-            print $code ("{\n");
+            print { $code } ("static enum ${enum_name} ${function_name}${local_length}(const char *string)\n");
+            print { $code } ("{\n");
             $self->print_table($trie->filter_depth($local_length)->rebuild_tree(), $code, 1);
-            printf $code ("    return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ''));
-            print $code ("}\n");
+            printf { $code } ("    return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ''));
+            print { $code } ("}\n");
         }
     }
 
     sub main {
         my ($self, $trie, $num_values, %lengths) = @_;
-        print $header ("#ifndef TRIE_HASH_${function_name}\n");
-        print $header ("#define TRIE_HASH_${function_name}\n");
-        print $header ("#include <stddef.h>\n");
-        print $header ("#include <stdint.h>\n");
+        print { $header } ("#ifndef TRIE_HASH_${function_name}\n");
+        print { $header } ("#define TRIE_HASH_${function_name}\n");
+        print { $header } ("#include <stddef.h>\n");
+        print { $header } ("#include <stdint.h>\n");
         foreach my $include (@includes) {
-            print $header ("#include $include\n");
+            print { $header } ("#include $include\n");
         }
-        printf $header ("enum { $counter_name = $num_values };\n") if (defined($counter_name));
-        print $header ("${enum_specifier} ${enum_name} {\n");
+        printf { $header } ("enum { $counter_name = $num_values };\n") if (defined($counter_name));
+        print { $header } ("${enum_specifier} ${enum_name} {\n");
         $self->print_words($trie, $header, 1);
-        printf $header ("    $unknown_label = $unknown,\n");
-        print $header ("};\n");
-        print $header ("$static enum ${enum_name} ${function_name}(const char *string, size_t length);\n");
+        printf { $header } ("    $unknown_label = $unknown,\n");
+        print { $header } ("};\n");
+        print { $header } ("$static enum ${enum_name} ${function_name}(const char *string, size_t length);\n");
 
-        print $code ("#include \"$header_name\"\n") if ($header_name ne $code_name);
+        print { $code } ("#include \"$header_name\"\n") if ($header_name ne $code_name);
 
         if ($multi_byte) {
-            print $code ("#ifdef __GNUC__\n");
+            print { $code } ("#ifdef __GNUC__\n");
             for (my $i=16; $i <= 64; $i *= 2) {
-                print $code ("typedef uint${i}_t __attribute__((aligned (1))) triehash_uu${i};\n");
-                print $code ("typedef char static_assert${i}[__alignof__(triehash_uu${i}) == 1 ? 1 : -1];\n");
+                print { $code } ("typedef uint${i}_t __attribute__((aligned (1))) triehash_uu${i};\n");
+                print { $code } ("typedef char static_assert${i}[__alignof__(triehash_uu${i}) == 1 ? 1 : -1];\n");
             }
 
-            print $code ("#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__\n");
-            print $code ("#define onechar(c, s, l) (((uint64_t)(c)) << (s))\n");
-            print $code ("#else\n");
-            print $code ("#define onechar(c, s, l) (((uint64_t)(c)) << (l-8-s))\n");
-            print $code ("#endif\n");
-            print $code ("#if (!defined(__ARM_ARCH) || defined(__ARM_FEATURE_UNALIGNED)) && !defined(TRIE_HASH_NO_MULTI_BYTE)\n");
-            print $code ("#define TRIE_HASH_MULTI_BYTE\n");
-            print $code ("#endif\n");
-            print $code ("#endif /*GNUC */\n");
+            print { $code } ("#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__\n");
+            print { $code } ("#define onechar(c, s, l) (((uint64_t)(c)) << (s))\n");
+            print { $code } ("#else\n");
+            print { $code } ("#define onechar(c, s, l) (((uint64_t)(c)) << (l-8-s))\n");
+            print { $code } ("#endif\n");
+            print { $code } ("#if (!defined(__ARM_ARCH) || defined(__ARM_FEATURE_UNALIGNED)) && !defined(TRIE_HASH_NO_MULTI_BYTE)\n");
+            print { $code } ("#define TRIE_HASH_MULTI_BYTE\n");
+            print { $code } ("#endif\n");
+            print { $code } ("#endif /*GNUC */\n");
 
-            print $code ("#ifdef TRIE_HASH_MULTI_BYTE\n");
+            print { $code } ("#ifdef TRIE_HASH_MULTI_BYTE\n");
             $self->print_functions($trie, %lengths);
             $multi_byte = 0;
-            print $code ("#else\n");
+            print { $code } ("#else\n");
             $self->print_functions($trie, %lengths);
-            print $code ("#endif /* TRIE_HASH_MULTI_BYTE */\n");
+            print { $code } ("#endif /* TRIE_HASH_MULTI_BYTE */\n");
         } else {
             $self->print_functions($trie, %lengths);
         }
 
-        print $code ("$static enum ${enum_name} ${function_name}(const char *string, size_t length)\n");
-        print $code ("{\n");
-        print $code ("    switch (length) {\n");
+        print { $code } ("$static enum ${enum_name} ${function_name}(const char *string, size_t length)\n");
+        print { $code } ("{\n");
+        print { $code } ("    switch (length) {\n");
         foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
-            print $code ("    case $local_length:\n");
-            print $code ("        return ${function_name}${local_length}(string);\n");
+            print { $code } ("    case $local_length:\n");
+            print { $code } ("        return ${function_name}${local_length}(string);\n");
         }
-        print $code ("    default:\n");
-        printf $code ("        return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ''));
-        print $code ("    }\n");
-        print $code ("}\n");
+        print { $code } ("    default:\n");
+        printf { $code } ("        return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ''));
+        print { $code } ("    }\n");
+        print { $code } ("}\n");
 
         # Print end of header here, in case header and code point to the same file
-        print $header ("#endif                       /* TRIE_HASH_${function_name} */\n");
+        print { $header } ("#endif                       /* TRIE_HASH_${function_name} */\n");
     }
 }
 
@@ -624,19 +624,19 @@ package TreeCodeGen {
 
     sub main {
         my ($self, $trie, $counter, %lengths) = @_;
-        printf $code ("┌────────────────────────────────────────────────────┐\n");
-        printf $code ("│                   Initial trie                     │\n");
-        printf $code ("└────────────────────────────────────────────────────┘\n");
+        printf { $code } ("┌────────────────────────────────────────────────────┐\n");
+        printf { $code } ("│                   Initial trie                     │\n");
+        printf { $code } ("└────────────────────────────────────────────────────┘\n");
         $self->print($trie);
-        printf $code ("┌────────────────────────────────────────────────────┐\n");
-        printf $code ("│                   Rebuilt trie                     │\n");
-        printf $code ("└────────────────────────────────────────────────────┘\n");
+        printf { $code } ("┌────────────────────────────────────────────────────┐\n");
+        printf { $code } ("│                   Rebuilt trie                     │\n");
+        printf { $code } ("└────────────────────────────────────────────────────┘\n");
         $self->print($trie->rebuild_tree());
 
         foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
-            printf $code ("┌────────────────────────────────────────────────────┐\n");
-            printf $code ("│              Trie for words of length %-4d         │\n", $local_length);
-            printf $code ("└────────────────────────────────────────────────────┘\n");
+            printf { $code } ("┌────────────────────────────────────────────────────┐\n");
+            printf { $code } ("│              Trie for words of length %-4d         │\n", $local_length);
+            printf { $code } ("└────────────────────────────────────────────────────┘\n");
             $self->print($trie->filter_depth($local_length)->rebuild_tree());
         }
     }
@@ -655,10 +655,10 @@ package TreeCodeGen {
         my ($self, $trie, $depth) = @_;
         $depth //= 0;
 
-        print $code (' → ') if defined($trie->{label});
-        print $code ($trie->{label} // '', "\n");
+        print { $code } (' → ') if defined($trie->{label});
+        print { $code } ($trie->{label} // '', "\n");
         foreach my $key (sort keys %{$trie->{children}}) {
-            print $code ('│   ' x ($depth), "├── $key");
+            print { $code } ('│   ' x ($depth), "├── $key");
             $self->print($trie->{children}{$key}, $depth + 1);
         }
     }
