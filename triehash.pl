@@ -386,7 +386,7 @@ package CCodeGen {
     }
 
     sub word_to_label {
-        my ($class, $word) = @_;
+        my ($self, $word) = @_;
 
         $word =~ s/_/__/g;
         $word =~ s/-/_/g;
