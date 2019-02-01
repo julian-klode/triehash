@@ -585,7 +585,13 @@ sub build_trie {
 
     open(my $input, '<', $ARGV[0]) or die "Cannot open $ARGV[0]: $!";
     while (my $line = <$input>) {
-        my ($label, $word, $value) = $line =~/\s*(?:([^~\s]+)\s*~)?(?:\s*([^~=\s]+)\s*)?(?:=\s*([^\s]+)\s+)?\s*/;
+        my ($label, $word, $value) = $line =~ m{
+            \s*
+            (?:([^~\s]+)\s*~)?      # Label ~
+            (?:\s*([^~=\s]+)\s*)?   # Word
+            (?:=\s*([^\s]+)\s+)?    # = Value
+            \s*
+        }x;
 
         if (defined $word) {
             $counter = $value if defined($value);
