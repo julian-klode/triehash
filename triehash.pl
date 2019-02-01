@@ -158,18 +158,18 @@ times.
 =cut
 
 my $unknown = -1;
-my $unknown_label = "Unknown";
+my $unknown_label = 'Unknown';
 my $counter_start = 0;
-my $enum_name = "PerfectKey";
-my $function_name = "PerfectHash";
+my $enum_name = 'PerfectKey';
+my $function_name = 'PerfectHash';
 my $enum_class = 0;
 
-my $code_name = "-";
-my $header_name = "-";
+my $code_name = '-';
+my $header_name = '-';
 my $code;
 my $header;
 my $ignore_case = 0;
-my $multi_byte = "320";
+my $multi_byte = '320';
 my $language = 'C';
 my $counter_name = undef;
 my @includes = ();
@@ -182,17 +182,17 @@ Getopt::Long::config('default',
                      'permute',
                      'auto_help');
 
-GetOptions ("code|C=s" => \$code_name,
-            "header|H=s"   => \$header_name,
-            "function-name=s" => \$function_name,
-            "ignore-case" => \$ignore_case,
-            "enum-name=s" => \$enum_name,
-            "language|l=s" => \$language,
-            "multi-byte=s" => \$multi_byte,
-            "enum-class" => \$enum_class,
-            "include=s" => \@includes,
-            "counter-name=s" => \$counter_name)
-    or die("Could not parse options!");
+GetOptions ('code|C=s' => \$code_name,
+            'header|H=s'   => \$header_name,
+            'function-name=s' => \$function_name,
+            'ignore-case' => \$ignore_case,
+            'enum-name=s' => \$enum_name,
+            'language|l=s' => \$language,
+            'multi-byte=s' => \$multi_byte,
+            'enum-class' => \$enum_class,
+            'include=s' => \@includes,
+            'counter-name=s' => \$counter_name)
+    or die('Could not parse options!');
 
 
 # This implements a simple trie. Each node has three attributes:
@@ -371,14 +371,14 @@ package CCodeGen {
 
     sub open_output {
         my $self = shift;
-        if ($code_name ne "-") {
+        if ($code_name ne '-') {
             open($code, '>', $code_name) or die "Cannot open $code_name: $!" ;
         } else {
             $code = *STDOUT;
         }
         if($code_name eq $header_name) {
             $header = $code;
-        } elsif ($header_name ne "-") {
+        } elsif ($header_name ne '-') {
             open($header, '>', $header_name) or die "Cannot open $header_name: $!" ;
         } else {
             $header = *STDOUT;
@@ -439,21 +439,21 @@ package CCodeGen {
             }
 
             if ($ignore_case && $can_use_bit && $want_use_bit) {
-                printf $fh (("    " x $indent) . "switch(%s | 0x%s) {\n", $self->switch_key($index, $key_length), "20" x $key_length);
+                printf $fh (('    ' x $indent) . "switch(%s | 0x%s) {\n", $self->switch_key($index, $key_length), '20' x $key_length);
             } else {
-                printf $fh (("    " x $indent) . "switch(%s) {\n", $self->switch_key($index, $key_length));
+                printf $fh (('    ' x $indent) . "switch(%s) {\n", $self->switch_key($index, $key_length));
             }
 
             my $notfirst = 0;
             foreach my $key (sort keys %{$trie->{children}}) {
                 if ($notfirst) {
-                    printf $fh ("    " x $indent . "    break;\n");
+                    printf $fh ('    ' x $indent . "    break;\n");
                 }
                 if ($ignore_case) {
-                    printf $fh ("    " x $indent . "case %s:\n", $self->case_label(lc($key)));
-                    printf $fh ("    " x $indent . "case %s:\n", $self->case_label(uc($key))) if lc($key) ne uc($key) && !($can_use_bit && $want_use_bit);
+                    printf $fh ('    ' x $indent . "case %s:\n", $self->case_label(lc($key)));
+                    printf $fh ('    ' x $indent . "case %s:\n", $self->case_label(uc($key))) if lc($key) ne uc($key) && !($can_use_bit && $want_use_bit);
                 } else {
-                    printf $fh ("    " x $indent . "case %s:\n", $self->case_label($key));
+                    printf $fh ('    ' x $indent . "case %s:\n", $self->case_label($key));
                 }
 
                 $self->print_table($trie->{children}{$key}, $fh, $indent + 1, $index + length($key));
@@ -461,14 +461,14 @@ package CCodeGen {
                 $notfirst=1;
             }
 
-            printf $fh ("    " x $indent . "}\n");
+            printf $fh ('    ' x $indent . "}\n");
         }
 
 
         # This node has a value, so it is a possible end point. If no children
         # matched, we have found our longest prefix.
         if (defined $trie->{value}) {
-            printf $fh ("    " x $indent . "return %s;\n", ($enum_class ? "${enum_name}::" : "").$trie->{label});
+            printf $fh ('    ' x $indent . "return %s;\n", ($enum_class ? "${enum_name}::" : '').$trie->{label});
         }
 
     }
@@ -477,10 +477,10 @@ package CCodeGen {
         my ($self, $trie, $fh, $indent, $sofar) = @_;
 
         $indent //= 0;
-        $sofar //= "";
+        $sofar //= '';
 
 
-        printf $fh ("    " x $indent."%s = %s,\n", $trie->{label}, $trie->{value}) if defined $trie->{value};
+        printf $fh ('    ' x $indent."%s = %s,\n", $trie->{label}, $trie->{value}) if defined $trie->{value};
 
         foreach my $key (sort keys %{$trie->{children}}) {
             $self->print_words($trie->{children}{$key}, $fh, $indent, $sofar . $key);
@@ -493,7 +493,7 @@ package CCodeGen {
             print $code ("static enum ${enum_name} ${function_name}${local_length}(const char *string)\n");
             print $code ("{\n");
             $self->print_table($trie->filter_depth($local_length)->rebuild_tree(), $code, 1);
-            printf $code ("    return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
+            printf $code ("    return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ''));
             print $code ("}\n");
         }
     }
@@ -551,7 +551,7 @@ package CCodeGen {
             print $code ("        return ${function_name}${local_length}(string);\n");
         }
         print $code ("    default:\n");
-        printf $code ("        return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ""));
+        printf $code ("        return %s$unknown_label;\n", ($enum_class ? "${enum_name}::" : ''));
         print $code ("    }\n");
         print $code ("}\n");
 
@@ -583,7 +583,7 @@ sub build_trie {
     my $counter = $counter_start;
     my %lengths;
 
-    open(my $input, '<', $ARGV[0]) or die "Cannot open ".$ARGV[0].": $!";
+    open(my $input, '<', $ARGV[0]) or die "Cannot open $ARGV[0]: $!";
     while (my $line = <$input>) {
         my ($label, $word, $value) = $line =~/\s*(?:([^~\s]+)\s*~)?(?:\s*([^~=\s]+)\s*)?(?:=\s*([^\s]+)\s+)?\s*/;
 
@@ -643,8 +643,8 @@ package TreeCodeGen {
 
     sub open_output {
         my $self = shift;
-        if ($code_name ne "-") {
-            open($code, '>', $code_name) or die "Cannot open ".$ARGV[0].": $!" ;
+        if ($code_name ne '-') {
+            open($code, '>', $code_name) or die "Cannot open $ARGV[0]: $!" ;
         } else {
             $code = *STDOUT;
         }
@@ -655,22 +655,22 @@ package TreeCodeGen {
         my ($self, $trie, $depth) = @_;
         $depth //= 0;
 
-        print $code (" → ") if defined($trie->{label});
-        print $code ($trie->{label} // "", "\n");
+        print $code (' → ') if defined($trie->{label});
+        print $code ($trie->{label} // '', "\n");
         foreach my $key (sort keys %{$trie->{children}}) {
-            print $code ("│   " x ($depth), "├── $key");
+            print $code ('│   ' x ($depth), "├── $key");
             $self->print($trie->{children}{$key}, $depth + 1);
         }
     }
 }
 
 my %codegens = (
-    C => "CCodeGen",
-    tree => "TreeCodeGen",
+    C => 'CCodeGen',
+    tree => 'TreeCodeGen',
 );
 
 
-defined($codegens{$language}) or die "Unknown language $language. Valid choices: ", join(", ", keys %codegens);
+defined($codegens{$language}) or die "Unknown language $language. Valid choices: ", join(', ', keys %codegens);
 my $codegen = $codegens{$language}->new();
 my ($trie, $counter, %lengths) = build_trie($codegen);
 
