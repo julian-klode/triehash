@@ -25,7 +25,7 @@ static enum PerfectKey PerfectHash(const char *string, size_t length)
 # Check that split files work
 testsuccess triehash -C test.c -H test.h --multi-byte=0
 testfileequal "#include \"test.h\"
- enum PerfectKey PerfectHash(const char *string, size_t length)
+enum PerfectKey PerfectHash(const char *string, size_t length)
 {
     switch (length) {
     default:
@@ -39,7 +39,7 @@ testfileequal "#ifndef TRIE_HASH_PerfectHash
 enum PerfectKey {
     Unknown = -1,
 };
- enum PerfectKey PerfectHash(const char *string, size_t length);
+enum PerfectKey PerfectHash(const char *string, size_t length);
 #endif                       /* TRIE_HASH_PerfectHash */" test.h
 
 

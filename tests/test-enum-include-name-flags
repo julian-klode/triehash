@@ -14,7 +14,7 @@ enum PerfectKey {
     w = 0,
     Unknown = -1,
 };
- enum PerfectKey PerfectHash(const char *string, size_t length);
+enum PerfectKey PerfectHash(const char *string, size_t length);
 #endif                       /* TRIE_HASH_PerfectHash */" triehash --multi-byte=0 -C /dev/null --include="<foo.h>" /dev/stdin
 
 # Check for --enum-class support

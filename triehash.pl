@@ -360,7 +360,7 @@ package Trie {
 
 # Code generator for C and C++
 package CCodeGen {
-    my $static = ($code_name eq $header_name) ? "static" : "";
+    my $static = ($code_name eq $header_name) ? "static " : "";
     my $enum_specifier = $enum_class ? "enum class" : "enum";
 
     sub new {
@@ -514,7 +514,7 @@ package CCodeGen {
         $self->print_words($trie, $header, 1);
         printf { $header } ("    $unknown_label = $unknown,\n");
         print { $header } ("};\n");
-        print { $header } ("$static enum ${enum_name} ${function_name}(const char *string, size_t length);\n");
+        print { $header } ("${static}enum ${enum_name} ${function_name}(const char *string, size_t length);\n");
 
         print { $code } ("#include \"$header_name\"\n") if ($header_name ne $code_name);
 
@@ -545,7 +545,7 @@ package CCodeGen {
             $self->print_functions($trie, %lengths);
         }
 
-        print { $code } ("$static enum ${enum_name} ${function_name}(const char *string, size_t length)\n");
+        print { $code } ("${static}enum ${enum_name} ${function_name}(const char *string, size_t length)\n");
         print { $code } ("{\n");
         print { $code } ("    switch (length) {\n");
         foreach my $local_length (sort { $a <=> $b } (keys %lengths)) {
