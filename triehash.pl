@@ -275,7 +275,7 @@ package Trie {
                     $found = 1 if defined $child;
                 }
             }
-            return undef if (!$found);
+            return if (!$found);
         } else {
             $new->{value} = $self->{value};
             $new->{label} = $self->{label};
