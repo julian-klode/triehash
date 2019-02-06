@@ -386,7 +386,7 @@ static enum PerfectKey PerfectHash4(const char *string)
     return Unknown;
 }
 #endif /* TRIE_HASH_MULTI_BYTE */
- enum PerfectKey PerfectHash(const char *string, size_t length)
+enum PerfectKey PerfectHash(const char *string, size_t length)
 {
     switch (length) {
     case 4:
@@ -416,7 +416,7 @@ static enum PerfectKey PerfectHash4(const char *string)
     }
     return Unknown;
 }
- enum PerfectKey PerfectHash(const char *string, size_t length)
+enum PerfectKey PerfectHash(const char *string, size_t length)
 {
     switch (length) {
     case 4:
