@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+include /usr/share/dpkg/pkg-info.mk
+pod2man := pod2man -r "triehash v$(DEB_VERSION_UPSTREAM)" -c triehash
+
+%:
+	dh $@
+
+
+override_dh_auto_clean:
+	dh_clean triehash.1
+
+override_dh_auto_build:
+	$(pod2man) triehash.pl triehash.1
+
+override_dh_auto_install:
+	install -m755 -D triehash.pl debian/triehash/usr/bin/triehash
