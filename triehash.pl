@@ -320,7 +320,7 @@ package Trie {
     # We cannot simply switch on all 4 bytes at once, but need to split before
     # the ambiguous character so we can process the ambiguous character on its
     # own.
-    sub find_ealier_split {
+    sub find_earlier_split {
         my ($self, $key) = @_;
 
         if ($ignore_case) {
@@ -343,7 +343,7 @@ package Trie {
         # Determine if/where we need to split before an ambiguous character
         my $new_split = 99999999999999999;
         foreach my $key (sort keys %{$self->{children}}) {
-            my $special_length = $self->find_ealier_split($key);
+            my $special_length = $self->find_earlier_split($key);
             $new_split = $special_length if ($special_length < $new_split);
         }
 
