@@ -1,3 +1,9 @@
+triehash (0.3-2) unstable; urgency=medium
+
+  * Re-upload source-only
+
+ -- Julian Andres Klode <jak@debian.org>  Thu, 05 Sep 2019 15:15:27 +0200
+
 triehash (0.3-1) unstable; urgency=medium
 
   * Initial release (Closes: #921372)
