@@ -12,6 +12,7 @@ Vcs-Browser: https://github.com/julian-klode/triehash
 Package: triehash
 Architecture: all
 Depends: ${misc:Depends}, ${perl:Depends}
+Multi-Arch: foreign
 Description: Generates perfect hash functions as native machine code
  TrieHash generates perfect hash functions as C code which then gets
  compiled into optimal machine code as part of the usual program compilation.
