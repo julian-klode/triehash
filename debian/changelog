@@ -1,3 +1,10 @@
+triehash (0.3-3) unstable; urgency=medium
+
+  * Set Multi-Arch: foreign to make apt cross bd-installable again.
+    Thanks to Helmut Grohne for reporting this
+
+ -- Julian Andres Klode <jak@debian.org>  Sun, 08 Mar 2020 10:56:48 +0100
+
 triehash (0.3-2) unstable; urgency=medium
 
   * Re-upload source-only
