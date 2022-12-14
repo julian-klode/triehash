@@ -6,7 +6,7 @@ Rules-Requires-Root: no
 Build-Depends: debhelper-compat (= 13)
 Standards-Version: 4.3.0
 Homepage: https://github.com/julian-klode/triehash
-Vcs-Git: https://github.com/julian-klode/triehash -b debian/master
+Vcs-Git: https://github.com/julian-klode/triehash.git -b debian/master
 Vcs-Browser: https://github.com/julian-klode/triehash
 
 Package: triehash
