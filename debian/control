@@ -3,7 +3,7 @@ Section: devel
 Priority: optional
 Maintainer: Julian Andres Klode <jak@debian.org>
 Rules-Requires-Root: no
-Build-Depends: debhelper (>= 11)
+Build-Depends: debhelper (>= 13~)
 Standards-Version: 4.3.0
 Homepage: https://github.com/julian-klode/triehash
 Vcs-Git: https://github.com/julian-klode/triehash -b debian/master
